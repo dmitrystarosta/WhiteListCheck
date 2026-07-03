@@ -57,7 +57,7 @@ object ProbeConfig {
         Probe("4PDA", "https://4pda.to/favicon.ico"),
         Probe("Drive2", "https://www.drive2.ru/favicon.ico"),
         Probe("Banki.ru", "https://www.banki.ru/favicon.ico"),
-        Probe("Москостюмер", "https://moskostumer.ru/favicon.ico")
+        Probe("МосКостюмер", "https://moskostumer.ru/favicon.ico")
     )
     val defaultC = listOf(
         Probe("Instagram*", "https://www.instagram.com/favicon.ico"),
