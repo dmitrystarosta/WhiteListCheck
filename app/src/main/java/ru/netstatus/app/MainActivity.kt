@@ -30,7 +30,7 @@ data class Probe(val name: String, val url: String)
 
 data class ProbeResult(val probe: Probe, val ok: Boolean, val ms: Long, val note: String)
 
-enum class Verdict { NO_INTERNET, WHITELIST, NORMAL, UNKNOWN }
+enum class Verdict { NO_INTERNET, WHITELIST, NORMAL, VPN_OR_ABROAD, UNKNOWN }
 
 data class ScanState(
     val running: Boolean = false,
@@ -56,7 +56,8 @@ object ProbeConfig {
         Probe("Habr", "https://habr.com/favicon.ico"),
         Probe("4PDA", "https://4pda.to/favicon.ico"),
         Probe("Drive2", "https://www.drive2.ru/favicon.ico"),
-        Probe("Banki.ru", "https://www.banki.ru/favicon.ico")
+        Probe("Banki.ru", "https://www.banki.ru/favicon.ico"),
+        Probe("Москостюмер", "https://moskostumer.ru/favicon.ico")
     )
     val defaultC = listOf(
         Probe("Instagram*", "https://www.instagram.com/favicon.ico"),
@@ -122,11 +123,13 @@ object Scanner {
     }
 
     // Вердикт по большинству: один упавший сайт не должен давать ложную тревогу.
-    fun verdict(a: List<ProbeResult>, b: List<ProbeResult>): Verdict {
+    fun verdict(a: List<ProbeResult>, b: List<ProbeResult>, c: List<ProbeResult>): Verdict {
         val aOk = a.count { it.ok } >= (a.size + 1) / 2
         val bOk = b.count { it.ok } >= (b.size + 1) / 2
+        val cOk = c.count { it.ok } >= (c.size + 1) / 2
         return when {
             !aOk && !bOk -> Verdict.NO_INTERNET
+            aOk && bOk && cOk -> Verdict.VPN_OR_ABROAD // даже заблокированные открылись
             aOk && !bOk -> Verdict.WHITELIST
             aOk && bOk -> Verdict.NORMAL
             else -> Verdict.UNKNOWN // A лежит, B работает — странная ситуация
@@ -179,7 +182,7 @@ fun App() {
             state = ScanState(
                 running = false,
                 networkType = net,
-                verdict = Scanner.verdict(ra, rb),
+                verdict = Scanner.verdict(ra, rb, rc),
                 groupA = ra, groupB = rb, groupC = rc,
                 configSource = source
             )
@@ -191,13 +194,13 @@ fun App() {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(Modifier.height(24.dp))
-        Text("Проверка режима сети", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+        Text("Я в белых списках?", fontSize = 22.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(4.dp))
         if (state.networkType.isNotEmpty()) {
             val warn = state.networkType != "мобильный интернет"
             Text(
                 "Сеть: ${state.networkType}" +
-                    if (warn) " (белые списки действуют на мобильном интернете)" else "",
+                    if (warn) " — белые списки обычно действуют на мобильном интернете. Но если ваш Wi-Fi раздаёт 3G/4G-роутер, ограничения касаются и его" else "",
                 fontSize = 13.sp,
                 color = if (warn) Color(0xFF996600) else Color.Gray
             )
@@ -239,6 +242,7 @@ fun VerdictCard(state: ScanState) {
         Verdict.NORMAL -> "Всё в норме: ограничений не видно" to Color(0xFF2E7D32)
         Verdict.WHITELIST -> "Похоже, включён БЕЛЫЙ СПИСОК" to Color(0xFFC62828)
         Verdict.NO_INTERNET -> "Интернет недоступен вообще" to Color(0xFF616161)
+        Verdict.VPN_OR_ABROAD -> "Открывается всё подряд: похоже, включён VPN или вы вне РФ" to Color(0xFF1565C0)
         Verdict.UNKNOWN -> "Непонятная ситуация, попробуйте ещё раз" to Color(0xFF996600)
         null -> if (state.running) "Проверяю…" to Color.Gray
                 else "Нажмите «Проверить»" to Color.Gray
