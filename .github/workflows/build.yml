@@ -17,16 +17,26 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Build debug APK
+      - name: Prepare keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > release.jks
+          cat > keystore.properties << EOF
+          storeFile=../release.jks
+          storePassword=${{ secrets.KEYSTORE_PASSWORD }}
+          keyAlias=${{ secrets.KEY_ALIAS }}
+          keyPassword=${{ secrets.KEY_PASSWORD }}
+          EOF
+
+      - name: Build release APK
         run: |
           if [ ! -f gradlew ]; then
             gradle wrapper --gradle-version 8.7
           fi
           chmod +x gradlew
-          ./gradlew assembleDebug
+          ./gradlew assembleRelease
 
       - name: Rename APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk WhiteListCheck.apk
+        run: cp app/build/outputs/apk/release/app-release.apk WhiteListCheck.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
