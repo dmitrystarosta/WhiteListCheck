@@ -33,7 +33,6 @@ android {
         targetSdk = 34
         versionCode = 4
         versionName = "0.3"
-		setProperty("archivesBaseName", "WhiteListCheck_v$versionName")
     }
 
     buildTypes {
