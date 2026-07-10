@@ -12,6 +12,7 @@ import android.net.NetworkCapabilities
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -21,6 +22,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -39,6 +44,7 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import kotlinx.coroutines.*
+import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
@@ -101,6 +107,49 @@ object ProbeConfig {
         }
         Triple(arr("a"), arr("b"), arr("c"))
     } catch (e: Exception) { null }
+}
+
+// ---------- Пользовательские списки (хранятся в SharedPreferences) ----------
+
+object ProbeStore {
+    private const val PREFS = "netstatus"
+    private const val KEY = "custom_lists"
+
+    // Возвращает пользовательские списки, а если их нет или они повреждены — встроенные.
+    fun load(ctx: Context): Triple<List<Probe>, List<Probe>, List<Probe>> {
+        val json = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getString(KEY, null)
+            ?: return Triple(ProbeConfig.defaultA, ProbeConfig.defaultB, ProbeConfig.defaultC)
+        return ProbeConfig.parse(json)
+            ?: Triple(ProbeConfig.defaultA, ProbeConfig.defaultB, ProbeConfig.defaultC)
+    }
+
+    fun save(ctx: Context, a: List<Probe>, b: List<Probe>, c: List<Probe>) {
+        fun arr(list: List<Probe>) = JSONArray().apply {
+            list.forEach { put(JSONObject().put("name", it.name).put("url", it.url)) }
+        }
+        val json = JSONObject().put("a", arr(a)).put("b", arr(b)).put("c", arr(c)).toString()
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit().putString(KEY, json).apply()
+    }
+
+    fun reset(ctx: Context) {
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().remove(KEY).apply()
+    }
+
+    fun isCustom(ctx: Context): Boolean =
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).contains(KEY)
+}
+
+// Превращает введённый пользователем домен в пробу.
+// Принимает «pikabu.ru», «https://pikabu.ru», «pikabu.ru/что-угодно».
+// Возвращает null, если строка не похожа на домен.
+fun probeFromDomain(input: String): Probe? {
+    val d = input.trim().lowercase()
+        .removePrefix("https://").removePrefix("http://")
+        .removePrefix("www.").substringBefore("/")
+    val domainRegex = Regex("^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$")
+    return if (domainRegex.matches(d)) Probe(d, "https://$d/favicon.ico") else null
 }
 
 // ---------- Сетевые проверки ----------
@@ -171,9 +220,12 @@ class CheckWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx,
         val ctx = applicationContext
         if (Scanner.networkType(ctx) == "нет сети") return Result.success()
 
-        val a = Scanner.scanGroup(ProbeConfig.defaultA)
-        val b = Scanner.scanGroup(ProbeConfig.defaultB)
-        val c = Scanner.scanGroup(ProbeConfig.defaultC)
+        // Фоновая проверка использует те же списки, что и ручная,
+        // включая пользовательские правки.
+        val (la, lb, lc) = ProbeStore.load(ctx)
+        val a = Scanner.scanGroup(la)
+        val b = Scanner.scanGroup(lb)
+        val c = Scanner.scanGroup(lc)
         val verdict = Scanner.verdict(a, b, c)
 
         val prefs = ctx.getSharedPreferences("netstatus", Context.MODE_PRIVATE)
@@ -243,6 +295,16 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun App() {
+    var showSettings by remember { mutableStateOf(false) }
+    if (showSettings) {
+        SettingsScreen(onBack = { showSettings = false })
+    } else {
+        MainScreen(onOpenSettings = { showSettings = true })
+    }
+}
+
+@Composable
+fun MainScreen(onOpenSettings: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var state by remember { mutableStateOf(ScanState()) }
@@ -261,7 +323,12 @@ fun App() {
             var c = ProbeConfig.defaultC
             var source = "встроенный список"
 
-            if (ProbeConfig.REMOTE_CONFIG_URL.isNotBlank()) {
+            if (ProbeStore.isCustom(context)) {
+                // Пользователь редактировал списки — они в приоритете.
+                val (ca, cb, cc) = ProbeStore.load(context)
+                a = ca; b = cb; c = cc
+                source = "пользовательский список"
+            } else if (ProbeConfig.REMOTE_CONFIG_URL.isNotBlank()) {
                 withContext(Dispatchers.IO) {
                     try {
                         val json = URL(ProbeConfig.REMOTE_CONFIG_URL).readText()
@@ -296,8 +363,25 @@ fun App() {
         Modifier.fillMaxSize().padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Spacer(Modifier.height(24.dp))
-        Text("Я в белых списках?", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(12.dp))
+        Box(Modifier.fillMaxWidth()) {
+            Text(
+                "Я в белых списках?",
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.align(Alignment.Center)
+            )
+            IconButton(
+                onClick = onOpenSettings,
+                modifier = Modifier.align(Alignment.CenterEnd)
+            ) {
+                Icon(
+                    Icons.Filled.Settings,
+                    contentDescription = "Настройки списков",
+                    tint = Color.Gray
+                )
+            }
+        }
         Spacer(Modifier.height(4.dp))
         if (state.networkType.isNotEmpty()) {
             val (netMsg, netColor) = when (state.networkType) {
@@ -362,6 +446,125 @@ fun App() {
                 item { Footnote() }
             }
             item { AppFooter() }
+        }
+    }
+}
+
+// ---------- Экран настроек списков ----------
+
+@Composable
+fun SettingsScreen(onBack: () -> Unit) {
+    val context = LocalContext.current
+    var lists by remember { mutableStateOf(ProbeStore.load(context)) }
+
+    // Системная кнопка «назад» возвращает на главный экран, а не закрывает приложение
+    BackHandler { onBack() }
+
+    fun apply(a: List<Probe>, b: List<Probe>, c: List<Probe>) {
+        ProbeStore.save(context, a, b, c)
+        lists = Triple(a, b, c)
+    }
+
+    Column(Modifier.fillMaxSize().padding(16.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack) {
+                Icon(Icons.Filled.ArrowBack, contentDescription = "Назад")
+            }
+            Text("Списки сайтов", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        }
+        Text(
+            "Изменения сохраняются сразу и действуют для ручной и фоновой проверки. " +
+            "Вводите домен латиницей, например pikabu.ru.",
+            fontSize = 12.sp, color = Color.Gray,
+            modifier = Modifier.padding(bottom = 4.dp)
+        )
+
+        LazyColumn(Modifier.weight(1f)) {
+            item {
+                EditableGroup(
+                    "Белый список (эталон доступности)", lists.first
+                ) { apply(it, lists.second, lists.third) }
+            }
+            item {
+                EditableGroup(
+                    "Обычный интернет (вне списка)", lists.second
+                ) { apply(lists.first, it, lists.third) }
+            }
+            item {
+                EditableGroup(
+                    "Заблокированные в РФ (контроль)", lists.third
+                ) { apply(lists.first, lists.second, it) }
+            }
+            item {
+                OutlinedButton(
+                    onClick = {
+                        ProbeStore.reset(context)
+                        lists = ProbeStore.load(context)
+                    },
+                    modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 24.dp)
+                ) {
+                    Text("Сбросить к стандартным спискам")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun EditableGroup(title: String, probes: List<Probe>, onChange: (List<Probe>) -> Unit) {
+    var input by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    Column {
+        GroupHeader(title)
+        probes.forEach { p ->
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(p.name, fontSize = 15.sp)
+                IconButton(onClick = {
+                    if (probes.size <= 1) {
+                        error = "В группе должен остаться хотя бы один сайт"
+                    } else {
+                        error = null
+                        onChange(probes - p)
+                    }
+                }) {
+                    Icon(
+                        Icons.Filled.Close,
+                        contentDescription = "Удалить ${p.name}",
+                        tint = Color.Gray
+                    )
+                }
+            }
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(
+                value = input,
+                onValueChange = { input = it; error = null },
+                placeholder = { Text("домен, например pikabu.ru", fontSize = 14.sp) },
+                singleLine = true,
+                modifier = Modifier.weight(1f)
+            )
+            Spacer(Modifier.width(8.dp))
+            Button(onClick = {
+                val p = probeFromDomain(input)
+                when {
+                    p == null -> error = "Похоже, это не домен. Пример: pikabu.ru"
+                    probes.any { it.url == p.url } -> error = "Такой сайт уже есть в группе"
+                    else -> {
+                        error = null
+                        onChange(probes + p)
+                        input = ""
+                    }
+                }
+            }) { Text("Добавить") }
+        }
+        error?.let {
+            Text(it, color = Color(0xFFC62828), fontSize = 12.sp,
+                modifier = Modifier.padding(top = 2.dp))
         }
     }
 }
