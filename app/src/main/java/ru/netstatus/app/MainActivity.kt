@@ -196,6 +196,7 @@ object Scanner {
         return when {
             caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> "мобильный интернет"
             caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> "Wi-Fi"
+            caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> "Ethernet (кабель)"
             caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN) -> "VPN"
             else -> "другое"
         }
@@ -413,6 +414,10 @@ fun MainScreen(onOpenSettings: () -> Unit) {
                     Color(0xFFC62828)
                 "Wi-Fi" -> ("Сеть: Wi-Fi — белые списки обычно действуют на мобильном интернете. " +
                     "Но если ваш Wi-Fi раздаёт 3G/4G-роутер, ограничения касаются и его") to
+                    Color(0xFF996600)
+                "Ethernet (кабель)" -> ("Сеть: Ethernet (кабель) — это домашний интернет, белые " +
+                    "списки обычно действуют на мобильном. Результат показывает состояние " +
+                    "именно кабельного подключения") to
                     Color(0xFF996600)
                 else -> "Сеть: ${state.networkType}" to Color.Gray
             }
