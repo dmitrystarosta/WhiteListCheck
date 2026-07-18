@@ -569,7 +569,9 @@ fun MainScreen(onOpenSettings: () -> Unit) {
         Spacer(Modifier.height(10.dp))
 
         LazyColumn(Modifier.fillMaxWidth().weight(1f)) {
-            if (state.networkType.isNotEmpty()) {
+            // Чип сети скрыт во время проверки: тип сети в этот момент
+            // перепроверяется, показывать старое значение нелогично.
+            if (state.networkType.isNotEmpty() && !state.running) {
                 item {
                     // Чип сети слева, кнопка «поделиться» справа.
                     // Alignment.Top — чтобы кнопка не уезжала вниз,
@@ -841,7 +843,12 @@ fun SettingsScreen(onBack: () -> Unit) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(
                 onClick = onBack,
-                modifier = Modifier.tvFocusHighlight(CircleShape)
+                // Сдвиг на 12dp влево компенсирует внутренние поля IconButton:
+                // видимая стрелка встаёт на одну вертикаль с краем контента,
+                // как принято для кнопки «назад».
+                modifier = Modifier
+                    .offset(x = (-12).dp)
+                    .tvFocusHighlight(CircleShape)
             ) {
                 Icon(
                     Icons.Filled.ArrowBack,
@@ -1182,6 +1189,16 @@ fun AppFooter() {
         Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // Копирайт стоит ВЫШЕ ссылки на версию намеренно: на Android TV
+        // прокрутка следует за фокусом пульта и доезжает до последнего
+        // фокусируемого элемента. Если нефокусируемый копирайт стоит ниже
+        // ссылки, он остаётся за нижним краем экрана.
+        Text(
+            "© 2026, Dmitry Starosta",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(8.dp))
         Text(
             "Версия $version · проверить обновления",
             style = MaterialTheme.typography.bodySmall,
@@ -1190,12 +1207,6 @@ fun AppFooter() {
                 .tvFocusHighlight()
                 .padding(horizontal = 6.dp, vertical = 2.dp)
                 .clickable { uriHandler.openUri(REPO_RELEASES) }
-        )
-        Spacer(Modifier.height(8.dp))
-        Text(
-            "© 2026, Dmitry Starosta",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
