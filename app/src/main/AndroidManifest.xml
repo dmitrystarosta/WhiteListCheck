@@ -20,9 +20,14 @@
         android:banner="@drawable/banner"
         android:theme="@android:style/Theme.Material.Light.NoActionBar"
         android:usesCleartextTraffic="false">
+        <!-- configChanges: при смене светлой/тёмной темы (uiMode) и повороте
+             экрана (orientation|screenSize) система НЕ пересоздаёт Activity —
+             иначе результаты проверки сбрасывались бы. Compose сам
+             перекрашивает и перестраивает интерфейс на лету. -->
         <activity
             android:name=".MainActivity"
-            android:exported="true">
+            android:exported="true"
+            android:configChanges="uiMode|orientation|screenSize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
