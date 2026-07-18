@@ -34,10 +34,12 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
@@ -67,6 +69,7 @@ import java.net.URL
 import java.util.concurrent.TimeUnit
 
 const val REPO_RELEASES = "https://github.com/dmitrystarosta/WhiteListCheck/releases"
+const val RUSTORE_URL = "https://www.rustore.ru/catalog/app/ru.netstatus.app"
 
 // ---------- Модель данных ----------
 
@@ -562,7 +565,20 @@ fun MainScreen(onOpenSettings: () -> Unit) {
 
         LazyColumn(Modifier.fillMaxWidth().weight(1f)) {
             if (state.networkType.isNotEmpty()) {
-                item { NetworkChip(state.networkType) }
+                item {
+                    // Чип сети слева, кнопка «поделиться» справа.
+                    // Alignment.Top — чтобы кнопка не уезжала вниз,
+                    // когда раскрывается пояснение чипа.
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Box(Modifier.weight(1f)) { NetworkChip(state.networkType) }
+                        if (state.verdict != null) {
+                            ShareVerdictButton(state)
+                        }
+                    }
+                }
             }
             item {
                 Button(
@@ -704,6 +720,51 @@ fun NetworkChip(networkType: String) {
                 modifier = Modifier.padding(top = 6.dp)
             )
         }
+    }
+}
+
+// ---------- Кнопка «поделиться вердиктом» ----------
+
+// Собирает человекочитаемый текст результата и открывает системное
+// меню «Поделиться» (Telegram, WhatsApp, SMS и т.д.).
+fun shareVerdict(context: Context, state: ScanState) {
+    val verdictText = when (state.verdict) {
+        Verdict.NORMAL -> "Всё в норме: ограничений не видно"
+        Verdict.WHITELIST -> "Похоже, включён БЕЛЫЙ СПИСОК"
+        Verdict.NO_INTERNET -> "Интернет недоступен вообще"
+        Verdict.VPN_OR_ABROAD -> "Открывается всё подряд: похоже, включён VPN или вы вне РФ"
+        else -> "Непонятная ситуация"
+    }
+    val time = java.text.SimpleDateFormat("dd.MM.yyyy 'в' HH:mm", java.util.Locale("ru"))
+        .format(java.util.Date())
+    val text = "$verdictText. Сеть: ${state.networkType}. " +
+        "Проверено $time приложением „Белый список?“: $RUSTORE_URL"
+    val intent = Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(Intent.EXTRA_TEXT, text)
+    }
+    context.startActivity(Intent.createChooser(intent, "Поделиться"))
+}
+
+// Круглая кнопка в стиле чипа сети: тонкая обводка, значок в цвете primary.
+@Composable
+fun ShareVerdictButton(state: ScanState) {
+    val context = LocalContext.current
+    Box(
+        Modifier
+            .tvFocusHighlight(CircleShape)
+            .size(32.dp)
+            .clip(CircleShape)
+            .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), CircleShape)
+            .clickable { shareVerdict(context, state) },
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            Icons.Filled.Share,
+            contentDescription = "Поделиться вердиктом",
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(16.dp)
+        )
     }
 }
 
