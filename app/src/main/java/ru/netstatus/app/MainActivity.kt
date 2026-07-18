@@ -1127,6 +1127,10 @@ fun Footnote() {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
+                // Сдвиг на 4dp влево компенсирует внутренний отступ (padding ниже),
+                // который нужен для рамки ТВ-фокуса: видимый текст встаёт
+                // на одну вертикаль с краем контента и абзацами расшифровки.
+                .offset(x = (-4).dp)
                 .tvFocusHighlight()
                 .clickable { expanded = !expanded }
                 .padding(horizontal = 4.dp, vertical = 2.dp)
