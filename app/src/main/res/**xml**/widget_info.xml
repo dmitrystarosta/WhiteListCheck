@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Паспорт виджета. minWidth/minHeight 40dp = одна ячейка сетки;
+     resizeMode позволяет растягивать. updatePeriodMillis 30 мин —
+     системная подстраховка для обновления надписи времени; основные
+     обновления приходят из приложения после каждой проверки. -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="40dp"
+    android:minHeight="40dp"
+    android:minResizeWidth="40dp"
+    android:minResizeHeight="40dp"
+    android:targetCellWidth="1"
+    android:targetCellHeight="1"
+    android:resizeMode="horizontal|vertical"
+    android:updatePeriodMillis="1800000"
+    android:initialLayout="@layout/widget_status"
+    android:previewImage="@drawable/widget_logo_normal"
+    android:widgetCategory="home_screen"/>
