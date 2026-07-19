@@ -483,20 +483,25 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun App() {
     var showSettings by remember { mutableStateOf(false) }
+    // Состояние проверки живёт на уровне App, а НЕ внутри MainScreen:
+    // при переходе в «Списки сайтов» MainScreen целиком покидает композицию,
+    // и всё его remember-состояние уничтожается. Если бы результаты хранились
+    // в MainScreen, они сбрасывались бы при каждом заходе в настройки.
+    val scanState = remember { mutableStateOf(ScanState()) }
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         if (showSettings) {
             SettingsScreen(onBack = { showSettings = false })
         } else {
-            MainScreen(onOpenSettings = { showSettings = true })
+            MainScreen(scanState = scanState, onOpenSettings = { showSettings = true })
         }
     }
 }
 
 @Composable
-fun MainScreen(onOpenSettings: () -> Unit) {
+fun MainScreen(scanState: MutableState<ScanState>, onOpenSettings: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var state by remember { mutableStateOf(ScanState()) }
+    var state by scanState
     val prefs = remember { context.getSharedPreferences("netstatus", Context.MODE_PRIVATE) }
     var bgEnabled by remember { mutableStateOf(prefs.getBoolean("bg_enabled", false)) }
 
