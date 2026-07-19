@@ -488,19 +488,32 @@ fun App() {
     // и всё его remember-состояние уничтожается. Если бы результаты хранились
     // в MainScreen, они сбрасывались бы при каждом заходе в настройки.
     val scanState = remember { mutableStateOf(ScanState()) }
+    // Scope для сканирования — тоже уровня App: rememberCoroutineScope
+    // внутри MainScreen отменяется вместе с его уходом из композиции,
+    // и запущенная проверка обрывалась бы на полпути, оставив вечное
+    // «Проверяю…» (running=true снять было бы уже некому). Со scope уровня
+    // App проверка спокойно доработает, пока пользователь в настройках.
+    val appScope = rememberCoroutineScope()
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         if (showSettings) {
             SettingsScreen(onBack = { showSettings = false })
         } else {
-            MainScreen(scanState = scanState, onOpenSettings = { showSettings = true })
+            MainScreen(
+                scanState = scanState,
+                scope = appScope,
+                onOpenSettings = { showSettings = true }
+            )
         }
     }
 }
 
 @Composable
-fun MainScreen(scanState: MutableState<ScanState>, onOpenSettings: () -> Unit) {
+fun MainScreen(
+    scanState: MutableState<ScanState>,
+    scope: CoroutineScope,
+    onOpenSettings: () -> Unit
+) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     var state by scanState
     val prefs = remember { context.getSharedPreferences("netstatus", Context.MODE_PRIVATE) }
     var bgEnabled by remember { mutableStateOf(prefs.getBoolean("bg_enabled", false)) }
