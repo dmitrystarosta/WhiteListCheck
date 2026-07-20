@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 150" role="img" aria-labelledby="title-vpn">
+  <title id="title-vpn">Синий индикатор — вероятно, включён VPN или устройство находится вне России</title>
+  <path d="M18 40a34 34 0 1 0 68 0 34 34 0 1 0-68 0" fill="#42A5F5" stroke="#FFCCBC" stroke-width="6"/>
+  <path d="M134 40a34 34 0 1 0 68 0 34 34 0 1 0-68 0" fill="#42A5F5" stroke="#FFCCBC" stroke-width="6"/>
+  <path d="M52 84a58 58 0 1 0 116 0 58 58 0 1 0-116 0" fill="#3E5A78" stroke="#FFCCBC" stroke-width="6"/>
+  <path d="M84 84a26 58 0 1 0 52 0 26 58 0 1 0-52 0" fill="none" stroke="#FFCCBC" stroke-width="4"/>
+  <path d="M52 84h116M60 54q50-20 100 0M60 114q50 20 100 0" fill="none" stroke="#FFCCBC" stroke-width="4"/>
+</svg>

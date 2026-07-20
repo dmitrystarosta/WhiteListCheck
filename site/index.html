@@ -12,7 +12,7 @@
   <link rel="canonical" href="https://belyjspisok.ru/">
   <link rel="icon" href="assets/icon.png" type="image/png">
   <link rel="apple-touch-icon" href="assets/icon.png">
-  <link rel="manifest" href="/site.webmanifest">
+  <link rel="manifest" href="site.webmanifest">
 
   <meta property="og:type" content="website">
   <meta property="og:locale" content="ru_RU">
@@ -57,6 +57,7 @@
     <nav aria-label="Основная навигация">
       <a href="#features">Возможности</a>
       <a href="#how">Как работает</a>
+      <a href="#widget">Виджет</a>
       <a href="#screens">Скриншоты</a>
       <a href="#faq">Вопросы</a>
     </nav>
@@ -121,6 +122,45 @@
       <img class="feature-shot" src="assets/screenshots/screen-1.png" alt="Приложение обнаружило VPN или подключение вне России" loading="lazy">
     </section>
 
+
+    <section id="widget" class="section widget-section">
+      <div class="widget-layout">
+        <div class="widget-copy">
+          <p class="eyebrow">Виджет на рабочий стол</p>
+          <h2>Состояние интернета видно одним взглядом</h2>
+          <p class="widget-lead">Виджет «Белый список?» показывает результат последней проверки цветом значка. Нажмите на него, чтобы запустить новую проверку прямо с рабочего стола — приложение открывать не нужно.</p>
+          <ul class="widget-benefits">
+            <li>Под значком отображается время последней проверки.</li>
+            <li>Если данные старше часа, виджет тускнеет и напоминает обновить результат.</li>
+            <li>Размер настраивается; виджет работает на телефонах и планшетах.</li>
+          </ul>
+        </div>
+        <figure class="widget-preview">
+          <img src="assets/widgets/whitelistcheck_widget.jpg" alt="Виджет приложения «Белый список?» на рабочем столе Android" loading="lazy" width="1080" height="1920">
+          <figcaption>Тап по виджету запускает проверку без открытия приложения.</figcaption>
+        </figure>
+      </div>
+
+      <div class="widget-states" aria-label="Значения цветов виджета">
+        <article class="widget-state">
+          <img src="assets/widgets/widget-normal.svg" alt="Зелёный значок виджета" loading="lazy">
+          <div><h3>Зелёный</h3><p>Всё в норме: интернет работает как обычно.</p></div>
+        </article>
+        <article class="widget-state">
+          <img src="assets/widgets/widget-whitelist.svg" alt="Красный значок виджета" loading="lazy">
+          <div><h3>Красный</h3><p>Обнаружен режим белого списка.</p></div>
+        </article>
+        <article class="widget-state">
+          <img src="assets/widgets/widget-vpn.svg" alt="Синий значок виджета" loading="lazy">
+          <div><h3>Синий</h3><p>Вероятно, включён VPN или устройство находится вне России.</p></div>
+        </article>
+        <article class="widget-state">
+          <img src="assets/widgets/widget-nonet.svg" alt="Серый значок виджета" loading="lazy">
+          <div><h3>Серый</h3><p>Интернет недоступен.</p></div>
+        </article>
+      </div>
+    </section>
+
     <section id="screens" class="section gallery-section">
       <div class="section-heading">
         <p class="eyebrow">Интерфейс</p>
@@ -180,6 +220,6 @@
       </a>
     </div>
   </footer>
-  <script src="/script.js" defer></script>
+  <script src="script.js" defer></script>
 </body>
 </html>
