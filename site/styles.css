@@ -84,3 +84,47 @@ html,body{max-width:100%;overflow-x:hidden}
   .remote-ring{width:28px;height:28px;box-shadow:inset 0 0 0 6px #1c1917}
   .remote-button{width:16px;height:6px}
 }
+
+/* Финальная адаптивная полировка */
+.tv-screen::after{display:none}
+.tv-screen img{object-fit:contain;background:#050a0f}
+
+@media(max-width:560px){
+  /* Все статичные цветные блоки сохраняют одинаковый воздух по краям. */
+  .privacy,
+  .cta{
+    width:auto!important;
+    max-width:none!important;
+    margin-left:20px!important;
+    margin-right:20px!important;
+  }
+
+  /* Горизонтальные карусели начинаются и заканчиваются на одной линии с текстом. */
+  .gallery,
+  .widget-states{
+    width:100%;
+    margin-left:0;
+    margin-right:0;
+    padding-left:0;
+    padding-right:0;
+    scroll-padding-left:0;
+    scroll-padding-right:0;
+    overscroll-behavior-inline:contain;
+  }
+  .gallery figure:first-child,
+  .widget-state:first-child{margin-left:0}
+  .gallery figure:last-child,
+  .widget-state:last-child{margin-right:0}
+
+  /* Карточки возможностей не обрезаются у нижнего края. */
+  .card{overflow:hidden}
+  .card p{overflow-wrap:anywhere}
+
+  /* Блок Android TV и чистый экран телевизора. */
+  .tv-visual{padding:8px 18px 34px 0}
+  .tv-screen img{aspect-ratio:1500/850;object-fit:contain}
+
+  /* Более спокойная мобильная типографика в крупных блоках. */
+  .privacy h2{font-size:clamp(2.25rem,12vw,3.3rem)}
+  .cta h2{font-size:clamp(2rem,9vw,2.8rem)}
+}
