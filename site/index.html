@@ -10,21 +10,25 @@
   <meta name="robots" content="index,follow,max-image-preview:large">
   <meta name="theme-color" content="#563a34">
   <link rel="canonical" href="https://belyjspisok.ru/">
-  <link rel="icon" href="assets/icon.png" type="image/png">
-  <link rel="apple-touch-icon" href="assets/icon.png">
-  <link rel="manifest" href="site.webmanifest">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
 
   <meta property="og:type" content="website">
   <meta property="og:locale" content="ru_RU">
   <meta property="og:title" content="Белый список? — проверка ограничений мобильного интернета">
   <meta property="og:description" content="Одно нажатие — и вы узнаете: включён белый список, пропал интернет или всё работает нормально.">
   <meta property="og:url" content="https://belyjspisok.ru/">
-  <meta property="og:image" content="https://belyjspisok.ru/assets/screenshots/screen-4.png">
+  <meta property="og:image" content="https://belyjspisok.ru/assets/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
   <meta property="og:image:alt" content="Экран приложения «Белый список?» с результатом проверки интернета">
   <meta name="twitter:card" content="summary_large_image">
 
   <link rel="preload" href="assets/icon.png" as="image">
-  <link rel="stylesheet" href="styles.css?v=20260720-final">
+  <link rel="stylesheet" href="styles.css?v=20260722-menu1">
 
   <script type="application/ld+json">
   {
@@ -62,17 +66,37 @@
 </head>
 <body>
   <header class="site-header">
-    <a class="brand" href="#top" aria-label="Белый список? — на главную">
-      <img src="assets/icon.png" width="48" height="48" alt="Иконка приложения «Белый список?»">
-      <span>Белый список?</span>
-    </a>
-    <nav aria-label="Основная навигация">
-      <a href="#features">Возможности</a>
+    <div class="header-inner">
+      <a class="brand" href="#top" aria-label="Белый список? — вернуться в начало страницы" title="Вернуться в начало">
+        <img src="assets/icon.png" width="48" height="48" alt="Иконка приложения «Белый список?»">
+        <span>Белый список?</span>
+      </a>
+
+      <nav class="desktop-nav" aria-label="Основная навигация">
+        <a href="#features">Когда пригодится</a>
+        <a href="#how">Как работает</a>
+        <a href="#widget">Виджет</a>
+        <a href="#screens">Интерфейс</a>
+        <a href="#tv">Android TV</a>
+        <a href="#faq">FAQ</a>
+      </nav>
+
+      <div class="header-actions">
+        <a class="header-download" href="#download">Скачать</a>
+        <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="mobile-menu" aria-label="Открыть меню">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </div>
+
+    <nav id="mobile-menu" class="mobile-menu" aria-label="Мобильная навигация" hidden>
+      <a href="#features">Когда пригодится</a>
       <a href="#how">Как работает</a>
       <a href="#widget">Виджет</a>
-      <a href="#screens">Скриншоты</a>
+      <a href="#screens">Интерфейс</a>
       <a href="#tv">Android TV</a>
-      <a href="#faq">Вопросы</a>
+      <a href="#faq">FAQ</a>
+      <a class="mobile-download" href="#download">Скачать приложение</a>
     </nav>
   </header>
 
@@ -94,7 +118,7 @@
       </div>
       <div class="hero-media">
         <div class="glow"></div>
-        <img src="assets/screenshots/screen-4.png" alt="Приложение сообщает, что ограничений мобильного интернета не видно" width="1080" height="1920">
+        <img src="assets/og-image.png" alt="Приложение сообщает, что ограничений мобильного интернета не видно" width="1080" height="1920">
       </div>
     </section>
 
@@ -236,7 +260,7 @@
       <details><summary>Можно ли проверить исходный код?</summary><p>Да. Исходный код открыт и опубликован в репозитории проекта.</p></details>
     </section>
 
-    <section class="section cta">
+    <section id="download" class="section cta">
       <img src="assets/icon.png" alt="" width="112" height="112">
       <div><h2>Узнайте, что происходит с интернетом</h2><p>Установите приложение и запустите быструю проверку сети.</p></div>
       <div class="download-row compact">
@@ -261,6 +285,6 @@
       </a>
     </div>
   </footer>
-  <script src="script.js?v=final" defer></script>
+  <script src="script.js?v=menu1" defer></script>
 </body>
 </html>
