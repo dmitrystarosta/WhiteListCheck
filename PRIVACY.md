@@ -19,4 +19,4 @@
 
 ## Контакты
 
-Вопросы по этой политике: whitelistcheck@starosta.ru или раздел Issues репозитория https://github.com/dmitrystarosta/WhiteListCheck
+Вопросы по этой политике: belyjspisok@starosta.ru или раздел Issues репозитория https://github.com/dmitrystarosta/WhiteListCheck
