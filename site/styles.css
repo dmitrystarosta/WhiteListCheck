@@ -222,3 +222,17 @@ body.menu-open{overflow:hidden}
   .mobile-menu{padding-left:12px;padding-right:12px}
 }
 @media(max-width:900px){.site-header .mobile-menu:not([hidden]){display:block}}
+
+
+/* Исправление v1.2.1: шапка всегда видна поверх страницы */
+body{padding-top:72px}
+.site-header{
+  position:fixed!important;
+  top:0;
+  left:0;
+  right:0;
+  width:100%;
+  z-index:10000;
+}
+@media(max-width:900px){body{padding-top:68px}}
+@media(max-width:560px){body{padding-top:62px}}
