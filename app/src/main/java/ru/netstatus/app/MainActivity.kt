@@ -24,7 +24,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -49,14 +49,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -84,6 +87,7 @@ import java.util.concurrent.TimeUnit
 
 const val REPO_RELEASES = "https://github.com/dmitrystarosta/WhiteListCheck/releases"
 const val RUSTORE_URL = "https://www.rustore.ru/catalog/app/ru.netstatus.app"
+const val SITE_URL = "https://belyjspisok.ru/"
 
 // ---------- Модель данных ----------
 
@@ -1478,6 +1482,49 @@ fun Footnote() {
     }
 }
 
+// Векторный знак приложения («уши + глобус») без плитки-фона. Рисуется
+// в Canvas: круги ушей и глобуса заливаются цветом ФОНА экрана, поэтому
+// нижние дуги ушей корректно перекрываются глобусом (как в иконке), а
+// видны только линии. Цвет линий берётся из темы (коричневый на светлой,
+// светло-бежевый на тёмной) — знак сам подстраивается под тему.
+@Composable
+fun AppLogoMark(modifier: Modifier = Modifier) {
+    val ink = MaterialTheme.colorScheme.primary
+    val fill = MaterialTheme.colorScheme.background
+    Canvas(modifier) {
+        // Габарит знака в координатах иконки (viewport 220): x[18..202], y[44..180]
+        val vbW = 184f; val vbH = 136f
+        val scale = minOf(size.width / vbW, size.height / vbH)
+        val ox = (size.width - vbW * scale) / 2f
+        val oy = (size.height - vbH * scale) / 2f
+        fun tx(x: Float) = ox + (x - 18f) * scale
+        fun ty(y: Float) = oy + (y - 44f) * scale
+        val sw6 = 6f * scale
+        val sw4 = 4f * scale
+        // уши (заливка фоном + контур)
+        for (cx in listOf(52f, 168f)) {
+            val c = Offset(tx(cx), ty(78f)); val r = 34f * scale
+            drawCircle(fill, r, c)
+            drawCircle(ink, r, c, style = Stroke(sw6))
+        }
+        // глобус поверх ушей
+        val gc = Offset(tx(110f), ty(122f)); val gr = 58f * scale
+        drawCircle(fill, gr, gc)
+        drawCircle(ink, gr, gc, style = Stroke(sw6))
+        // меридиан (эллипс), экватор, две широты — только линии
+        val mrx = 26f * scale; val mry = 58f * scale
+        drawOval(ink, topLeft = Offset(gc.x - mrx, gc.y - mry),
+            size = Size(mrx * 2, mry * 2), style = Stroke(sw4))
+        drawLine(ink, Offset(tx(52f), ty(122f)), Offset(tx(168f), ty(122f)), strokeWidth = sw4)
+        drawPath(Path().apply {
+            moveTo(tx(60f), ty(92f)); quadraticBezierTo(tx(110f), ty(72f), tx(160f), ty(92f))
+        }, ink, style = Stroke(sw4))
+        drawPath(Path().apply {
+            moveTo(tx(60f), ty(152f)); quadraticBezierTo(tx(110f), ty(172f), tx(160f), ty(152f))
+        }, ink, style = Stroke(sw4))
+    }
+}
+
 @Composable
 fun AppFooter() {
     val uriHandler = LocalUriHandler.current
@@ -1492,12 +1539,17 @@ fun AppFooter() {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         // Небольшой логотип приложения над копирайтом — ненавязчивая подпись
-        // бренда. Используется та же иконка (самодостаточная плитка), поэтому
-        // одинаково читается в светлой и тёмной теме. Декоративный, без клика.
-        Image(
-            painter = painterResource(R.drawable.ic_launcher),
-            contentDescription = null,
-            modifier = Modifier.size(44.dp)
+        // бренда. Векторный знак без плитки, подстраивается под тему. Тап —
+        // открывает сайт приложения.
+        AppLogoMark(
+            modifier = Modifier
+                .size(52.dp)
+                .tvFocusHighlight()
+                .clip(RoundedCornerShape(10.dp))
+                .clickable(onClickLabel = "Открыть сайт приложения") {
+                    uriHandler.openUri(SITE_URL)
+                }
+                .padding(6.dp)
         )
         Spacer(Modifier.height(10.dp))
         // Копирайт стоит ВЫШЕ ссылки на версию намеренно: на Android TV
