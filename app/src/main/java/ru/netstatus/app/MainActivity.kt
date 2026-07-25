@@ -24,6 +24,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -55,6 +56,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -1489,6 +1491,15 @@ fun AppFooter() {
         Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // Небольшой логотип приложения над копирайтом — ненавязчивая подпись
+        // бренда. Используется та же иконка (самодостаточная плитка), поэтому
+        // одинаково читается в светлой и тёмной теме. Декоративный, без клика.
+        Image(
+            painter = painterResource(R.drawable.ic_launcher),
+            contentDescription = null,
+            modifier = Modifier.size(44.dp)
+        )
+        Spacer(Modifier.height(10.dp))
         // Копирайт стоит ВЫШЕ ссылки на версию намеренно: на Android TV
         // прокрутка следует за фокусом пульта и доезжает до последнего
         // фокусируемого элемента. Если нефокусируемый копирайт стоит ниже
