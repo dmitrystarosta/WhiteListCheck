@@ -716,6 +716,21 @@ fun MainScreen(
     val prefs = remember { context.getSharedPreferences("netstatus", Context.MODE_PRIVATE) }
     var bgEnabled by remember { mutableStateOf(prefs.getBoolean("bg_enabled", false)) }
 
+    // Состояния «развёрнуто» сворачиваемых блоков подняты на уровень экрана,
+    // а НЕ хранятся внутри элементов LazyColumn. Уехавший за нижний край
+    // элемент LazyColumn уничтожается вместе со своим remember-состоянием, и
+    // его rememberSaveable восстанавливался неодинаково: на ТВ блок сворачивался
+    // сразу при прокрутке за экран, на телефоне слетал после сворачивания
+    // приложения. Чип сети «держался» лишь потому, что он первый элемент списка
+    // и почти не уезжает. На уровне экрана состояние живёт стабильно — переживает
+    // и прокрутку (в т.ч. фокусом пульта на ТВ), и возврат в приложение.
+    // netExpanded ключуется типом сети: при смене сети пояснение сворачивается.
+    var netExpanded by rememberSaveable(state.networkType) { mutableStateOf(false) }
+    var whyExpanded by rememberSaveable { mutableStateOf(false) }
+    var expA by rememberSaveable { mutableStateOf(true) }
+    var expB by rememberSaveable { mutableStateOf(true) }
+    var expC by rememberSaveable { mutableStateOf(true) }
+
     val permLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { /* результат не критичен: без разрешения просто не будет уведомлений */ }
@@ -876,7 +891,9 @@ fun MainScreen(
                         Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.Top
                     ) {
-                        Box(Modifier.weight(1f)) { NetworkChip(state.networkType) }
+                        Box(Modifier.weight(1f)) {
+                            NetworkChip(state.networkType, netExpanded) { netExpanded = !netExpanded }
+                        }
                         if (state.verdict != null) {
                             ShareVerdictButton(state)
                         }
@@ -942,14 +959,14 @@ fun MainScreen(
                 }
             }
             if (state.groupA.isNotEmpty()) {
-                item { GroupCard("Белый список (эталон доступности)", state.groupA) }
+                item { GroupCard("Белый список (эталон доступности)", state.groupA, expA) { expA = !expA } }
             }
             if (state.groupB.isNotEmpty()) {
-                item { GroupCard("Обычный интернет (вне списка)", state.groupB) }
+                item { GroupCard("Обычный интернет (вне списка)", state.groupB, expB) { expB = !expB } }
             }
             if (state.groupC.isNotEmpty()) {
-                item { GroupCard("Заблокированные в РФ (контроль)", state.groupC) }
-                item { Footnote() }
+                item { GroupCard("Заблокированные в РФ (контроль)", state.groupC, expC) { expC = !expC } }
+                item { Footnote(whyExpanded) { whyExpanded = !whyExpanded } }
             }
             item { AppFooter() }
         }
@@ -959,8 +976,7 @@ fun MainScreen(
 // Чип типа сети. Если для сети есть пояснение — рядом значок ⓘ,
 // по тапу пояснение разворачивается и сворачивается.
 @Composable
-fun NetworkChip(networkType: String) {
-    var expanded by rememberSaveable(networkType) { mutableStateOf(false) }
+fun NetworkChip(networkType: String, expanded: Boolean, onToggle: () -> Unit) {
 
     val detail: String?
     val color: Color
@@ -999,7 +1015,7 @@ fun NetworkChip(networkType: String) {
             border = BorderStroke(1.dp, color.copy(alpha = 0.5f)),
             modifier = Modifier
                 .tvFocusHighlight(RoundedCornerShape(50))
-                .clickable(enabled = detail != null) { expanded = !expanded }
+                .clickable(enabled = detail != null) { onToggle() }
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -1081,8 +1097,7 @@ fun ShareVerdictButton(state: ScanState) {
 
 // Сворачиваемая карточка группы сайтов со строкой-сводкой («3/4 доступны»).
 @Composable
-fun GroupCard(title: String, rows: List<ProbeResult>) {
-    var expanded by rememberSaveable { mutableStateOf(true) }
+fun GroupCard(title: String, rows: List<ProbeResult>, expanded: Boolean, onToggle: () -> Unit) {
     val ok = rows.count { it.ok }
     Surface(
         Modifier.fillMaxWidth().padding(top = 12.dp),
@@ -1095,7 +1110,7 @@ fun GroupCard(title: String, rows: List<ProbeResult>) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .tvFocusHighlight()
-                    .clickable { expanded = !expanded }
+                    .clickable { onToggle() }
             ) {
                 Column(Modifier.weight(1f)) {
                     Text(
@@ -1423,8 +1438,7 @@ fun ProbeRow(r: ProbeResult) {
 // Расшифровка ошибок спрятана за значок ⓘ (по образцу чипа сети).
 // Пометка про Instagram видна всегда — прятать её нельзя.
 @Composable
-fun Footnote() {
-    var expanded by rememberSaveable { mutableStateOf(false) }
+fun Footnote(expanded: Boolean, onToggle: () -> Unit) {
     Column(Modifier.padding(top = 16.dp, bottom = 8.dp)) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -1434,7 +1448,7 @@ fun Footnote() {
                 // на одну вертикаль с краем контента и абзацами расшифровки.
                 .offset(x = (-4).dp)
                 .tvFocusHighlight()
-                .clickable { expanded = !expanded }
+                .clickable { onToggle() }
                 .padding(horizontal = 4.dp, vertical = 2.dp)
         ) {
             Text(
