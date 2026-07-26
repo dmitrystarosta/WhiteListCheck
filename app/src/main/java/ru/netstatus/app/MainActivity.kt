@@ -1063,7 +1063,7 @@ fun shareVerdict(context: Context, state: ScanState) {
     val time = java.text.SimpleDateFormat("dd.MM.yyyy 'в' HH:mm", java.util.Locale("ru"))
         .format(java.util.Date())
     val text = "$verdictText. Сеть: ${state.networkType}. " +
-        "Проверено $time приложением „Белый список?“: $RUSTORE_URL"
+        "Проверено $time приложением „Белый список?“: $SITE_URL"
     val intent = Intent(Intent.ACTION_SEND).apply {
         type = "text/plain"
         putExtra(Intent.EXTRA_TEXT, text)
