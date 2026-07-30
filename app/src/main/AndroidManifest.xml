@@ -38,7 +38,7 @@
         <!-- Виджет-индикатор состояния сети на рабочем столе -->
         <receiver
             android:name=".StatusWidget"
-            android:exported="true"
+            android:exported="false"
             android:label="Белый список?">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
