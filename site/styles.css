@@ -292,3 +292,32 @@ body{padding-top:72px}
     min-width:min(78vw,290px);
   }
 }
+
+
+/* 2026-08-15 v2 — screenshots keep their natural 9:16 proportions */
+.gallery figure{
+  flex:0 0 260px;
+  width:260px;
+  min-width:260px;
+}
+.gallery img{
+  display:block;
+  width:100%;
+  height:auto!important;
+  max-height:none!important;
+  aspect-ratio:auto!important;
+  object-fit:contain!important;
+  object-position:center top;
+}
+
+@media(max-width:560px){
+  .gallery figure{
+    flex:0 0 min(78vw,290px);
+    width:min(78vw,290px);
+    min-width:min(78vw,290px);
+  }
+  .gallery img{
+    height:auto!important;
+    aspect-ratio:auto!important;
+  }
+}
