@@ -497,3 +497,15 @@ body{padding-top:72px}
     touch-action:auto;
   }
 }
+
+
+/* 2026-08-16 — fix identical screenshots rendering differently in Firefox */
+.hero-media img{
+  object-fit: contain;
+}
+
+.feature-shot{
+  height: auto;
+  max-height: 760px;
+  object-fit: contain;
+}
