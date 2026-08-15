@@ -13,8 +13,10 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.text.format.DateFormat
 import android.view.View
 import android.widget.RemoteViews
@@ -25,6 +27,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -60,6 +63,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -88,6 +92,7 @@ import java.util.concurrent.TimeUnit
 const val REPO_RELEASES = "https://github.com/dmitrystarosta/WhiteListCheck/releases"
 const val RUSTORE_URL = "https://www.rustore.ru/catalog/app/ru.netstatus.app"
 const val SITE_URL = "https://belyjspisok.ru/"
+const val REPO_URL = "https://github.com/dmitrystarosta/WhiteListCheck"
 
 // ---------- Модель данных ----------
 
@@ -680,7 +685,22 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun App() {
+    val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences("netstatus", Context.MODE_PRIVATE) }
     var showSettings by remember { mutableStateOf(false) }
+    // Экран «Как остаться на связи?» — переоткрывается из подвала (та же
+    // инструкция, что и второй шаг онбординга).
+    var showHelp by remember { mutableStateOf(false) }
+    // Онбординг показываем только действительно свежей установке: нет ни
+    // флага onboarded, ни следов прежнего использования (bg_enabled /
+    // last_verdict). Обновившимся пользователям он не мешает.
+    var showOnboarding by remember {
+        mutableStateOf(
+            !prefs.getBoolean("onboarded", false) &&
+                !prefs.contains("bg_enabled") &&
+                !prefs.contains("last_verdict")
+        )
+    }
     // Состояние проверки живёт на уровне App, а НЕ внутри MainScreen:
     // при переходе в «Списки сайтов» MainScreen целиком покидает композицию,
     // и всё его remember-состояние уничтожается. Если бы результаты хранились
@@ -693,13 +713,20 @@ fun App() {
     // App проверка спокойно доработает, пока пользователь в настройках.
     val appScope = rememberCoroutineScope()
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-        if (showSettings) {
-            SettingsScreen(onBack = { showSettings = false })
-        } else {
-            MainScreen(
+        when {
+            showOnboarding -> OnboardingFlow(
+                onFinish = {
+                    prefs.edit().putBoolean("onboarded", true).apply()
+                    showOnboarding = false
+                }
+            )
+            showSettings -> SettingsScreen(onBack = { showSettings = false })
+            showHelp -> ConnectivityHelpScreen(onDone = { showHelp = false }, showBack = true)
+            else -> MainScreen(
                 scanState = scanState,
                 scope = appScope,
-                onOpenSettings = { showSettings = true }
+                onOpenSettings = { showSettings = true },
+                onOpenHelp = { showHelp = true }
             )
         }
     }
@@ -709,7 +736,8 @@ fun App() {
 fun MainScreen(
     scanState: MutableState<ScanState>,
     scope: CoroutineScope,
-    onOpenSettings: () -> Unit
+    onOpenSettings: () -> Unit,
+    onOpenHelp: () -> Unit
 ) {
     val context = LocalContext.current
     var state by scanState
@@ -968,7 +996,7 @@ fun MainScreen(
                 item { GroupCard("Заблокированные в РФ (контроль)", state.groupC, expC) { expC = !expC } }
                 item { Footnote(whyExpanded) { whyExpanded = !whyExpanded } }
             }
-            item { AppFooter() }
+            item { AppFooter(onOpenHelp) }
         }
     }
 }
@@ -1540,7 +1568,7 @@ fun AppLogoMark(modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun AppFooter() {
+fun AppFooter(onOpenHelp: () -> Unit) {
     val uriHandler = LocalUriHandler.current
     val context = LocalContext.current
     val version = remember {
@@ -1552,8 +1580,14 @@ fun AppFooter() {
         Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Небольшой логотип приложения над копирайтом — ненавязчивая подпись
-        // бренда. Векторный знак без плитки, подстраивается под тему. Тап —
+        // Карточка «нет рекламы» + просьба об отзыве. Ненавязчиво, статично
+        // (не всплывающее окно): просит оценку, не раздражая.
+        ReviewCard()
+
+        // Равные отступы сверху и снизу от логотипа.
+        Spacer(Modifier.height(22.dp))
+        // Небольшой логотип приложения — ненавязчивая подпись бренда.
+        // Векторный знак без плитки, подстраивается под тему. Тап —
         // открывает сайт приложения.
         AppLogoMark(
             modifier = Modifier
@@ -1565,17 +1599,16 @@ fun AppFooter() {
                 }
                 .padding(6.dp)
         )
-        Spacer(Modifier.height(10.dp))
-        // Копирайт стоит ВЫШЕ ссылки на версию намеренно: на Android TV
-        // прокрутка следует за фокусом пульта и доезжает до последнего
-        // фокусируемого элемента. Если нефокусируемый копирайт стоит ниже
-        // ссылки, он остаётся за нижним краем экрана.
+        Spacer(Modifier.height(22.dp))
+        // Копирайт стоит ВЫШЕ ссылок намеренно: на Android TV прокрутка
+        // следует за фокусом пульта и доезжает до последнего фокусируемого
+        // элемента. Нефокусируемый копирайт ниже ссылок остался бы за краем.
         Text(
-            "© 2026, Dmitry Starosta",
+            "© 2026 · Dmitry Starosta",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(9.dp))
         Text(
             "Версия $version · проверить обновления",
             style = MaterialTheme.typography.bodySmall,
@@ -1585,5 +1618,359 @@ fun AppFooter() {
                 .padding(horizontal = 6.dp, vertical = 2.dp)
                 .clickable { uriHandler.openUri(REPO_RELEASES) }
         )
+        Spacer(Modifier.height(9.dp))
+        Text(
+            "Как остаться на связи?",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier
+                .tvFocusHighlight()
+                .padding(horizontal = 6.dp, vertical = 2.dp)
+                .clickable { onOpenHelp() }
+        )
+    }
+}
+
+// Карточка «в приложении нет рекламы» с двумя одинаковыми по форме
+// кнопками-ссылками: RuStore (отзыв и оценка) и GitHub (звезда репозиторию).
+// Логотипы в родных цветах: иконка RuStore — как есть (Image, без тонировки),
+// марка GitHub — тонируется темой (Icon + tint), чтобы быть видимой и на
+// светлой, и на тёмной теме.
+@Composable
+fun ReviewCard() {
+    val uriHandler = LocalUriHandler.current
+    Surface(
+        Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            Text(
+                "В приложении нет рекламы. Новые функции появляются благодаря " +
+                    "вашим отзывам и письмам. Будем рады оценке.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(12.dp))
+            Row {
+                OutlinedButton(
+                    onClick = { uriHandler.openUri(RUSTORE_URL) },
+                    shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
+                    modifier = Modifier.weight(1f).tvFocusHighlight(RoundedCornerShape(12.dp))
+                ) {
+                    Image(
+                        painter = painterResource(R.drawable.ic_rustore),
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("RuStore")
+                }
+                Spacer(Modifier.width(10.dp))
+                OutlinedButton(
+                    onClick = { uriHandler.openUri(REPO_URL) },
+                    shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
+                    modifier = Modifier.weight(1f).tvFocusHighlight(RoundedCornerShape(12.dp))
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_github),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("GitHub")
+                }
+            }
+        }
+    }
+}
+
+// Открывает системный экран настроек ЭТОГО приложения (там на большинстве
+// прошивок, включая MIUI/HyperOS, доступны «Автозапуск» и «Батарея»).
+// Никаких данных не читаем и не меняем — только навигация; тумблеры жмёт
+// сам пользователь. Разрешений не требует.
+private fun openAppSettings(ctx: Context) {
+    try {
+        ctx.startActivity(
+            Intent(
+                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                Uri.fromParts("package", ctx.packageName, null)
+            ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        )
+    } catch (_: Exception) {
+        try {
+            ctx.startActivity(
+                Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
+        } catch (_: Exception) { }
+    }
+}
+
+// ---------- Онбординг первого запуска (v0.5.3) ----------
+
+// Два шага: приветствие с ненавязчивым предложением фоновой проверки, затем
+// «Как остаться на связи» (те же настройки телефона, что переоткрываются из
+// подвала). «Позже» на первом шаге завершает онбординг без второго экрана.
+@Composable
+fun OnboardingFlow(onFinish: () -> Unit) {
+    val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences("netstatus", Context.MODE_PRIVATE) }
+    var step by remember { mutableStateOf(1) }
+
+    val permLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { /* результат не критичен: без разрешения просто не будет уведомлений */ }
+
+    if (step == 1) {
+        // Назад на первом экране = пропустить онбординг.
+        BackHandler { onFinish() }
+        OnboardingWelcome(
+            onEnable = {
+                prefs.edit().putBoolean("bg_enabled", true).apply()
+                if (Build.VERSION.SDK_INT >= 33) {
+                    permLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
+                scheduleBackground(context)
+                step = 2
+            },
+            onLater = onFinish
+        )
+    } else {
+        BackHandler { step = 1 }
+        ConnectivityHelpScreen(onDone = onFinish, showBack = false)
+    }
+}
+
+@Composable
+fun OnboardingWelcome(onEnable: () -> Unit, onLater: () -> Unit) {
+    Column(
+        Modifier.fillMaxSize().padding(horizontal = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(Modifier.height(48.dp))
+        AppLogoMark(Modifier.size(96.dp))
+        Spacer(Modifier.height(16.dp))
+        Text(
+            "Белый список?",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            "Покажет, что сейчас с интернетом: всё работает, включён белый " +
+                "список или пропал сигнал.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
+        Spacer(Modifier.height(24.dp))
+        Surface(
+            Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(18.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant
+        ) {
+            Column(Modifier.padding(16.dp)) {
+                Text(
+                    "Фоновая проверка и уведомления",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "Будем сами следить за связью и предупредим, когда начнётся " +
+                        "ограничение — даже если приложение закрыто. Можно включить " +
+                        "сейчас или позже.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        Spacer(Modifier.weight(1f))
+        Button(
+            onClick = onEnable,
+            shape = RoundedCornerShape(14.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp)
+                .tvFocusHighlight(RoundedCornerShape(14.dp))
+        ) {
+            Text(
+                "Включить",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+        TextButton(
+            onClick = onLater,
+            modifier = Modifier.padding(top = 2.dp, bottom = 20.dp).tvFocusHighlight()
+        ) {
+            Text("Позже")
+        }
+    }
+}
+
+// Экран «Как остаться на связи»: разрешение на уведомления + переход в
+// системные настройки для автозапуска/батареи. Используется и как второй
+// шаг онбординга (showBack=false, снизу кнопка «Готово»), и как
+// переоткрываемая из подвала инструкция (showBack=true, сверху стрелка).
+@Composable
+fun ConnectivityHelpScreen(onDone: () -> Unit, showBack: Boolean) {
+    val context = LocalContext.current
+    val initiallyGranted = Build.VERSION.SDK_INT < 33 ||
+        context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) ==
+        PackageManager.PERMISSION_GRANTED
+    var granted by remember { mutableStateOf(initiallyGranted) }
+    val permLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { ok -> if (ok) granted = true }
+
+    BackHandler { onDone() }
+
+    Column(Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
+        Spacer(Modifier.height(10.dp))
+        if (showBack) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(
+                    onClick = onDone,
+                    modifier = Modifier.offset(x = (-12).dp).tvFocusHighlight(CircleShape)
+                ) {
+                    Icon(
+                        Icons.Filled.ArrowBack,
+                        contentDescription = "Назад",
+                        tint = MaterialTheme.colorScheme.onBackground
+                    )
+                }
+                Text(
+                    "Как остаться на связи?",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+        } else {
+            Spacer(Modifier.height(20.dp))
+            Text(
+                "Чтобы проверка не выключалась",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            Spacer(Modifier.height(8.dp))
+        }
+        Text(
+            "Телефон может сам останавливать приложения, которые работают в " +
+                "фоне. Пара настроек — и «Белый список?» продолжит следить за связью.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        Surface(
+            Modifier.fillMaxWidth().padding(top = 12.dp),
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant
+        ) {
+            Column(Modifier.padding(14.dp)) {
+                Text(
+                    "Уведомления",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "Разрешите, чтобы получать предупреждение о начале ограничения.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(8.dp))
+                if (granted) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Filled.Check,
+                            contentDescription = null,
+                            tint = verdictColors(Verdict.NORMAL).content,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            "Разрешено",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = verdictColors(Verdict.NORMAL).content
+                        )
+                    }
+                } else {
+                    OutlinedButton(
+                        onClick = {
+                            if (Build.VERSION.SDK_INT >= 33)
+                                permLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            else granted = true
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.tvFocusHighlight(RoundedCornerShape(12.dp))
+                    ) { Text("Разрешить") }
+                }
+            }
+        }
+
+        Surface(
+            Modifier.fillMaxWidth().padding(top = 12.dp),
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant
+        ) {
+            Column(Modifier.padding(14.dp)) {
+                Text(
+                    "Работа в фоне",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "Откройте настройки приложения и разрешите автозапуск и работу " +
+                        "без ограничений батареи.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = { openAppSettings(context) },
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.tvFocusHighlight(RoundedCornerShape(12.dp))
+                ) { Text("Открыть настройки") }
+            }
+        }
+
+        Text(
+            "На разных телефонах этот экран выглядит по-разному — это нормально. " +
+                "Если что-то не открылось, найдите приложение в настройках вручную.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 14.dp)
+        )
+
+        Spacer(Modifier.weight(1f))
+        if (!showBack) {
+            Button(
+                onClick = onDone,
+                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp)
+                    .tvFocusHighlight(RoundedCornerShape(14.dp))
+            ) {
+                Text(
+                    "Готово",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
+        Spacer(Modifier.height(20.dp))
     }
 }
