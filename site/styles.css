@@ -321,3 +321,57 @@ body{padding-top:72px}
     aspect-ratio:auto!important;
   }
 }
+
+
+/* 2026-08-15 — gallery navigation: swipe + desktop dots */
+.gallery{
+  scrollbar-width:none;
+  -ms-overflow-style:none;
+}
+.gallery::-webkit-scrollbar{
+  display:none;
+  width:0;
+  height:0;
+}
+
+.gallery-dots{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  margin:18px auto 0;
+  min-height:18px;
+}
+
+.gallery-dot{
+  width:8px;
+  height:8px;
+  padding:0;
+  border:0;
+  border-radius:999px;
+  background:rgba(86,58,52,.28);
+  cursor:pointer;
+  transition:width .2s ease, background .2s ease, transform .2s ease;
+}
+
+.gallery-dot:hover,
+.gallery-dot:focus-visible{
+  background:rgba(86,58,52,.55);
+  outline:none;
+}
+
+.gallery-dot.is-active{
+  width:28px;
+  background:var(--brand);
+}
+
+@media(max-width:560px){
+  .gallery-dots{
+    display:none;
+  }
+
+  .gallery{
+    scroll-snap-type:x mandatory;
+    touch-action:pan-x;
+  }
+}

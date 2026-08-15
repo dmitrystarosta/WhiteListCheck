@@ -33,3 +33,71 @@ if (menuButton && mobileMenu) {
     if (window.innerWidth > 900) closeMenu();
   });
 }
+
+/* Screenshot gallery: swipe on touch devices, dot navigation on larger screens */
+const gallery = document.querySelector('.gallery');
+
+if (gallery) {
+  const slides = Array.from(gallery.querySelectorAll('figure'));
+
+  if (slides.length > 1) {
+    const dots = document.createElement('div');
+    dots.className = 'gallery-dots';
+    dots.setAttribute('aria-label', 'Навигация по скриншотам');
+
+    const buttons = slides.map((slide, index) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'gallery-dot';
+      button.setAttribute('aria-label', `Показать скриншот ${index + 1}`);
+      button.setAttribute('aria-current', index === 0 ? 'true' : 'false');
+
+      if (index === 0) button.classList.add('is-active');
+
+      button.addEventListener('click', () => {
+        const targetLeft = slide.offsetLeft - gallery.offsetLeft;
+        gallery.scrollTo({ left: targetLeft, behavior: 'smooth' });
+      });
+
+      dots.appendChild(button);
+      return button;
+    });
+
+    gallery.insertAdjacentElement('afterend', dots);
+
+    let ticking = false;
+
+    const updateActiveDot = () => {
+      const currentLeft = gallery.scrollLeft;
+      let activeIndex = 0;
+      let smallestDistance = Infinity;
+
+      slides.forEach((slide, index) => {
+        const slideLeft = slide.offsetLeft - gallery.offsetLeft;
+        const distance = Math.abs(slideLeft - currentLeft);
+
+        if (distance < smallestDistance) {
+          smallestDistance = distance;
+          activeIndex = index;
+        }
+      });
+
+      buttons.forEach((button, index) => {
+        const active = index === activeIndex;
+        button.classList.toggle('is-active', active);
+        button.setAttribute('aria-current', active ? 'true' : 'false');
+      });
+
+      ticking = false;
+    };
+
+    gallery.addEventListener('scroll', () => {
+      if (!ticking) {
+        window.requestAnimationFrame(updateActiveDot);
+        ticking = true;
+      }
+    }, { passive: true });
+
+    window.addEventListener('resize', updateActiveDot);
+  }
+}
