@@ -594,3 +594,16 @@ body{padding-top:72px}
   }
 
 }
+
+
+/* 2026-08-16 — hero screenshot rounded bottom corners */
+.hero-media img{
+  border-radius:46px !important;
+  overflow:hidden;
+}
+
+@media(max-width:560px){
+  .hero-media img{
+    border-radius:30px !important;
+  }
+}
