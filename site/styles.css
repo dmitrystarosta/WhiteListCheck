@@ -375,3 +375,85 @@ body{padding-top:72px}
     touch-action:pan-x;
   }
 }
+
+
+/* 2026-08-15 — gallery arrows on desktop, swipe on mobile */
+.gallery-dots{
+  display:none!important;
+}
+
+.gallery-shell{
+  position:relative;
+}
+
+.gallery{
+  scrollbar-width:none;
+  -ms-overflow-style:none;
+  scroll-behavior:smooth;
+}
+.gallery::-webkit-scrollbar{
+  display:none;
+  width:0;
+  height:0;
+}
+
+.gallery-arrow{
+  position:absolute;
+  top:50%;
+  z-index:5;
+  width:44px;
+  height:44px;
+  margin:0;
+  padding:0;
+  border:0;
+  border-radius:50%;
+  background:rgba(255,255,255,.88);
+  color:var(--ink);
+  box-shadow:0 6px 18px rgba(49,40,36,.16);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:32px;
+  line-height:1;
+  cursor:pointer;
+  transform:translateY(-50%);
+  transition:opacity .18s ease, transform .18s ease, background .18s ease;
+  backdrop-filter:blur(6px);
+}
+.gallery-arrow:hover,
+.gallery-arrow:focus-visible{
+  background:#fff;
+  transform:translateY(-50%) scale(1.05);
+  outline:none;
+}
+.gallery-arrow:disabled{
+  opacity:.22;
+  cursor:default;
+  pointer-events:none;
+}
+.gallery-arrow-prev{
+  left:-22px;
+}
+.gallery-arrow-next{
+  right:-22px;
+}
+
+@media(max-width:900px){
+  .gallery-arrow{
+    width:40px;
+    height:40px;
+    font-size:28px;
+  }
+  .gallery-arrow-prev{left:6px}
+  .gallery-arrow-next{right:6px}
+}
+
+@media(max-width:560px){
+  .gallery-arrow{
+    display:none;
+  }
+  .gallery{
+    touch-action:pan-x;
+    scroll-snap-type:x mandatory;
+  }
+}

@@ -34,70 +34,39 @@ if (menuButton && mobileMenu) {
   });
 }
 
-/* Screenshot gallery: swipe on touch devices, dot navigation on larger screens */
+/* Screenshot gallery:
+   desktop/tablet — arrow buttons;
+   phone — native finger swipe. */
 const gallery = document.querySelector('.gallery');
+const prevButton = document.querySelector('.gallery-arrow-prev');
+const nextButton = document.querySelector('.gallery-arrow-next');
 
-if (gallery) {
-  const slides = Array.from(gallery.querySelectorAll('figure'));
+if (gallery && prevButton && nextButton) {
+  const getStep = () => {
+    const firstSlide = gallery.querySelector('figure');
+    if (!firstSlide) return gallery.clientWidth * 0.8;
 
-  if (slides.length > 1) {
-    const dots = document.createElement('div');
-    dots.className = 'gallery-dots';
-    dots.setAttribute('aria-label', 'Навигация по скриншотам');
+    const styles = window.getComputedStyle(gallery);
+    const gap = parseFloat(styles.columnGap || styles.gap || 0) || 0;
+    return firstSlide.getBoundingClientRect().width + gap;
+  };
 
-    const buttons = slides.map((slide, index) => {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'gallery-dot';
-      button.setAttribute('aria-label', `Показать скриншот ${index + 1}`);
-      button.setAttribute('aria-current', index === 0 ? 'true' : 'false');
+  const updateButtons = () => {
+    const maxScroll = Math.max(0, gallery.scrollWidth - gallery.clientWidth);
+    prevButton.disabled = gallery.scrollLeft <= 2;
+    nextButton.disabled = gallery.scrollLeft >= maxScroll - 2;
+  };
 
-      if (index === 0) button.classList.add('is-active');
+  prevButton.addEventListener('click', () => {
+    gallery.scrollBy({ left: -getStep(), behavior: 'smooth' });
+  });
 
-      button.addEventListener('click', () => {
-        const targetLeft = slide.offsetLeft - gallery.offsetLeft;
-        gallery.scrollTo({ left: targetLeft, behavior: 'smooth' });
-      });
+  nextButton.addEventListener('click', () => {
+    gallery.scrollBy({ left: getStep(), behavior: 'smooth' });
+  });
 
-      dots.appendChild(button);
-      return button;
-    });
+  gallery.addEventListener('scroll', updateButtons, { passive: true });
+  window.addEventListener('resize', updateButtons);
 
-    gallery.insertAdjacentElement('afterend', dots);
-
-    let ticking = false;
-
-    const updateActiveDot = () => {
-      const currentLeft = gallery.scrollLeft;
-      let activeIndex = 0;
-      let smallestDistance = Infinity;
-
-      slides.forEach((slide, index) => {
-        const slideLeft = slide.offsetLeft - gallery.offsetLeft;
-        const distance = Math.abs(slideLeft - currentLeft);
-
-        if (distance < smallestDistance) {
-          smallestDistance = distance;
-          activeIndex = index;
-        }
-      });
-
-      buttons.forEach((button, index) => {
-        const active = index === activeIndex;
-        button.classList.toggle('is-active', active);
-        button.setAttribute('aria-current', active ? 'true' : 'false');
-      });
-
-      ticking = false;
-    };
-
-    gallery.addEventListener('scroll', () => {
-      if (!ticking) {
-        window.requestAnimationFrame(updateActiveDot);
-        ticking = true;
-      }
-    }, { passive: true });
-
-    window.addEventListener('resize', updateActiveDot);
-  }
+  updateButtons();
 }
