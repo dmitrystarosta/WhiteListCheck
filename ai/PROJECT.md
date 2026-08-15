@@ -1,7 +1,7 @@
 # PROJECT.md
 
 Техническая документация проекта WhiteListCheck. Меняется редко.
-Актуально на v0.5.1 (versionCode 13).
+Актуально на v0.5.3 (versionCode 15).
 
 ## Описание проекта
 
@@ -22,12 +22,13 @@
 ## Архитектура
 
 Одна Activity (MainActivity), UI на Jetpack Compose, весь код в одном
-Kotlin-файле (~1510 строк). Виджет — на RemoteViews (Compose в виджетах
+Kotlin-файле (~1980 строк). Виджет — на RemoteViews (Compose в виджетах
 не работает в принципе). Логические блоки внутри MainActivity.kt
 в порядке следования:
 
 **Константы и модель данных**
-- `REPO_RELEASES`, `RUSTORE_URL` — ссылки для подвала и кнопки «поделиться»
+- `REPO_RELEASES`, `RUSTORE_URL`, `REPO_URL`, `SITE_URL` — ссылки для
+  подвала, кнопки «поделиться» и блока отзыва
 - `Probe`, `ProbeResult`, `Verdict`, `ScanState` — модель. В ScanState
   есть поле `checkedAt` (время получения показанного результата) — нужно
   для синхронизации с виджетом, см. ниже
@@ -88,9 +89,19 @@ Kotlin-файле (~1510 строк). Виджет — на RemoteViews (Compose
 - `GroupCard` — сворачиваемая карточка группы со сводкой «N/M доступны»
 - `SettingsScreen` / `EditableGroup` — экран «Списки сайтов»
 - `VerdictCard`, `StatusBadge`, `ProbeRow` (кликабельное имя →
-  LocalUriHandler), `Footnote` (расшифровка ошибок + сноска про
-  Instagram), `AppFooter` (копирайт + версия из PackageManager,
-  ссылка REPO_RELEASES)
+  LocalUriHandler), `Footnote` (расшифровка ошибок + сноска про Instagram)
+- `AppLogoMark` (v0.5.2) — Canvas-знак «уши+глобус» без плитки: линии
+  цветом primary, заливка кругов цветом фона (нижние дуги ушей
+  перекрываются глобусом, видны только линии); адаптивен по теме
+- `AppFooter` — логотип-ссылка на сайт (SITE_URL), версия из PackageManager
+  (ссылка REPO_RELEASES), копирайт, `ReviewCard`, ссылка
+  «Как остаться на связи ⓘ»
+- `ReviewCard` (v0.5.3) — блок «в приложении нет рекламы» + две кнопки:
+  RuStore (Image, ic_rustore.xml, без тонировки) и GitHub (Icon с tint
+  по теме, ic_github.xml)
+- `OnboardingFlow` / `OnboardingWelcome` / `ConnectivityHelpScreen`
+  (v0.5.3) — онбординг первого запуска и переоткрываемая из подвала
+  инструкция; `openAppSettings` — переход в настройки приложения
 
 ## Ключевые решения по состоянию (не ломать)
 
@@ -108,6 +119,12 @@ Kotlin-файле (~1510 строк). Виджет — на RemoteViews (Compose
   не трогаем. LocalLifecycleOwner берётся из
   androidx.compose.ui.platform (в Compose 1.7+ переехал
   в androidx.lifecycle.compose).
+- **Онбординг — по времени установки, не по prefs** (v0.5.3):
+  freshInstall = firstInstallTime==lastUpdateTime + флаг onboarded.
+  Системный бэкап Android восстанавливает SharedPreferences при
+  переустановке, поэтому «свежесть» по ним ненадёжна. Разрешение
+  уведомлений запрашивается только на 2-м экране онбординга (иначе статус
+  «Разрешено» не совпадал бы с реальностью).
 
 ## SharedPreferences "netstatus"
 
@@ -117,6 +134,7 @@ Kotlin-файле (~1510 строк). Виджет — на RemoteViews (Compose
 | last_verdict | имя последнего вердикта (Verdict.name) |
 | last_check_ts | время последней проверки, мс — для виджета и синхронизации |
 | custom_lists | пользовательские списки сайтов (JSON) |
+| onboarded | показан ли онбординг первого запуска (v0.5.3) |
 
 Пишут все три пути проверки: ручная (runScan), фоновая (CheckWorker)
 и виджет (WidgetScanWorker).
@@ -133,6 +151,8 @@ WhiteListCheck/
 │       ├── java/ru/netstatus/app/MainActivity.kt   # ВЕСЬ код
 │       └── res/
 │           ├── drawable/ic_launcher.xml
+│           ├── drawable/ic_rustore.xml             # синяя иконка RuStore
+│           ├── drawable/ic_github.xml              # марка GitHub (Octocat)
 │           ├── drawable/banner.xml                 # баннер Android TV
 │           ├── drawable/widget_bg.xml
 │           ├── drawable/widget_logo_normal.xml
@@ -290,3 +310,12 @@ push в main (плюс ручной запуск workflow_dispatch). Готов�
   аккаунтов нужны 12 тестировщиков на 14 дней; приоритет — RuStore.
   На горизонте 2027 — глобальная верификация Android-разработчиков
   Google даже для sideload (следить за новостями).
+- **Кнопка батареи/автозапуска — переход в настройки приложения**
+  (ACTION_APPLICATION_DETAILS_SETTINGS, fallback ACTION_SETTINGS) без
+  спец-разрешения (v0.5.3): прямой MIUI-автозапуск ненадёжен, а
+  REQUEST_IGNORE_BATTERY_OPTIMIZATIONS Google Play ограничивает. Статус
+  автозапуска MIUI прочитать нельзя (нет API) → кнопка-действие, а не
+  статус «Настроено».
+- **Логотипы отзыва — официальные ассеты** (v0.5.3): RuStore синий
+  (Image без тонировки), GitHub Octocat (Icon с tint по теме);
+  перекраска брендов в один цвет ломает гайдлайны.
