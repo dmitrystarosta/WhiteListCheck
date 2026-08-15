@@ -53,8 +53,9 @@ if (gallery && prevButton && nextButton) {
 
   const updateButtons = () => {
     const maxScroll = Math.max(0, gallery.scrollWidth - gallery.clientWidth);
-    const atStart = gallery.scrollLeft <= 2;
-    const atEnd = gallery.scrollLeft >= maxScroll - 2;
+    const edgeTolerance = 8;
+    const atStart = gallery.scrollLeft <= edgeTolerance;
+    const atEnd = gallery.scrollLeft >= maxScroll - edgeTolerance;
 
     prevButton.classList.toggle('is-hidden', atStart);
     nextButton.classList.toggle('is-hidden', atEnd);
@@ -75,4 +76,6 @@ if (gallery && prevButton && nextButton) {
   window.addEventListener('resize', updateButtons);
 
   updateButtons();
+  requestAnimationFrame(updateButtons);
 }
+
