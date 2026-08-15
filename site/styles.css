@@ -457,3 +457,43 @@ body{padding-top:72px}
     scroll-snap-type:x mandatory;
   }
 }
+
+
+/* 2026-08-15 — slider arrows polish + mobile vertical scrolling */
+.gallery-arrow{
+  font-size:0;
+  opacity:1;
+  visibility:visible;
+  pointer-events:auto;
+}
+
+.gallery-arrow::before{
+  content:"";
+  width:10px;
+  height:10px;
+  border-top:2px solid currentColor;
+  border-right:2px solid currentColor;
+  display:block;
+}
+
+.gallery-arrow-prev::before{
+  transform:rotate(-135deg);
+  margin-left:4px;
+}
+
+.gallery-arrow-next::before{
+  transform:rotate(45deg);
+  margin-right:4px;
+}
+
+.gallery-arrow.is-hidden{
+  opacity:0;
+  visibility:hidden;
+  pointer-events:none;
+}
+
+@media(max-width:560px){
+  .gallery{
+    touch-action:auto;
+  }
+}

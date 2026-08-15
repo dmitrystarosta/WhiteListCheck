@@ -53,8 +53,14 @@ if (gallery && prevButton && nextButton) {
 
   const updateButtons = () => {
     const maxScroll = Math.max(0, gallery.scrollWidth - gallery.clientWidth);
-    prevButton.disabled = gallery.scrollLeft <= 2;
-    nextButton.disabled = gallery.scrollLeft >= maxScroll - 2;
+    const atStart = gallery.scrollLeft <= 2;
+    const atEnd = gallery.scrollLeft >= maxScroll - 2;
+
+    prevButton.classList.toggle('is-hidden', atStart);
+    nextButton.classList.toggle('is-hidden', atEnd);
+
+    prevButton.disabled = atStart;
+    nextButton.disabled = atEnd;
   };
 
   prevButton.addEventListener('click', () => {
