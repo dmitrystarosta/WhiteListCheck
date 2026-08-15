@@ -197,7 +197,7 @@ html{scroll-padding-top:88px}
 .menu-toggle[aria-expanded="true"] span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
 .mobile-menu{border-top:1px solid var(--line);background:rgba(255,250,247,.98);box-shadow:0 18px 32px rgba(49,40,36,.12);padding:10px 16px 16px}
 .mobile-menu[hidden]{display:none}
-.mobile-menu a{display:flex;align-items:center;min-height:45px;padding:0 14px;border-radius:12px;color:var(--ink);font-weight:650;text-decoration:none}
+.mobile-menu a{display:flex;align-items:center;justify-content:center;text-align:center;min-height:45px;padding:0 14px;border-radius:12px;color:var(--ink);font-weight:650;text-decoration:none}
 .mobile-menu a:hover,.mobile-menu a:focus-visible{background:var(--surface)}
 .mobile-menu .mobile-download{margin-top:8px;justify-content:center;background:var(--brand);color:#fff}
 body.menu-open{overflow:hidden}
