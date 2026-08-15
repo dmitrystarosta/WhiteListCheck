@@ -63,27 +63,33 @@ GitHub: dmitrystarosta) полностью с помощью ИИ. Это его
 - Ошибки переведены на русский: DNS, таймаут, сброс соединения, TLS;
   расшифровка за «Почему ошибки разные ⓘ»; пометка про Instagram
   видна всегда
-- Подвал: копирайт, версия (ссылка на релизы)
+- Приветствие при первом запуске + экран «Как остаться на связи» с помощью
+  по настройкам телефона; переоткрывается из подвала (v0.5.3)
+- Подвал: логотип-ссылка на сайт (v0.5.2), версия (ссылка на релизы),
+  копирайт, блок «в приложении нет рекламы» с кнопками отзыва в
+  RuStore/GitHub, ссылка «Как остаться на связи ⓘ» (v0.5.3)
 - Заготовка удалённого конфига списков (REMOTE_CONFIG_URL, пока пустая)
 
 ## Архитектура
 
-Однофайловое приложение: весь код в MainActivity.kt (~1510 строк).
-Порядок блоков внутри файла: константы (REPO_RELEASES, RUSTORE_URL) →
-data-классы (Probe, ProbeResult, Verdict, ScanState) → ProbeConfig
-(встроенные списки) → ProbeStore (пользовательские списки) → Scanner
-(сетевые проверки, networkType — VPN проверяется ПЕРВЫМ, вердикт) →
+Однофайловое приложение: весь код в MainActivity.kt (~1980 строк).
+Порядок блоков внутри файла: константы (REPO_RELEASES, RUSTORE_URL,
+REPO_URL, SITE_URL) → data-классы (Probe, ProbeResult, Verdict, ScanState)
+→ ProbeConfig (встроенные списки) → ProbeStore (пользовательские списки) →
+Scanner (сетевые проверки, networkType — VPN проверяется ПЕРВЫМ, вердикт) →
 StatusWidgetUpdater + StatusWidget + WidgetScanWorker (виджет) →
 CheckWorker + schedule/cancelBackground (фон) → шрифты/цвета/тема
 (golosTypography, isAppDark, verdictColors, statusBadgeColors, warnColor,
 dangerColor, AppTheme, tvFocusHighlight) → MainActivity → Composable UI
-(App, MainScreen, NetworkChip, ShareVerdictButton, GroupCard,
-SettingsScreen, EditableGroup, VerdictCard, StatusBadge, ProbeRow,
-Footnote, AppFooter).
+(App — ветвление онбординг / настройки / «Как остаться на связи» / главный,
+MainScreen, NetworkChip, ShareVerdictButton, GroupCard, SettingsScreen,
+EditableGroup, VerdictCard, StatusBadge, ProbeRow, Footnote, AppLogoMark,
+AppFooter, ReviewCard, OnboardingFlow, OnboardingWelcome,
+ConnectivityHelpScreen, openAppSettings).
 
 Состояние: ScanState живёт на уровне App (НЕ внутри MainScreen).
 Настройки — SharedPreferences "netstatus": bg_enabled, last_verdict,
-last_check_ts, custom_lists.
+last_check_ts, custom_lists, onboarded.
 
 ## Используемые технологии
 
@@ -171,25 +177,28 @@ last_check_ts, custom_lists.
 
 ## Текущее состояние проекта
 
-**v0.5.1 (versionCode 13)** выпущена на GitHub 22.07.2026 и отправлена
-на модерацию в RuStore (в магазине пока v0.4.1 / versionCode 9 —
-пользователям приедет всё сразу: виджет, сохранение состояния,
-синхронизация). Главное за последние версии: виджет-индикатор (v0.5)
-и синхронизация виджета с экраном приложения (v0.5.1).
+**v0.5.3 (versionCode 15)** выпущена на GitHub (Latest) и отправлена
+на модерацию в RuStore: онбординг первого запуска, экран «Как остаться
+на связи», блок отзыва без рекламы, полировка подвала и шрифтов. В RuStore
+пока опубликована v0.5.1 — пользователям v0.5.3 приедет после модерации
+(включая изменения v0.5.2: логотип в подвале, стабильные раскрывашки).
 
-Запущен сайт belyjspisok.ru и заведена почта проекта. Тема на 4PDA —
-на премодерации с 17.07. RuMarket и GetApps — подана v0.3.1, статусы
-проверять. Первый живой отклик пользователя (Рустам, RuStore) —
-запрос виджета — выполнен, написать ему после публикации.
+Есть первые пользователи и тёплые отзывы (Henry, Максим): ценят минимализм,
+«ничего лишнего» — держать в уме, не раздувать функциональность. Сайт
+belyjspisok.ru и почта проекта работают. Тема на 4PDA — на премодерации
+с 17.07. RuMarket и GetApps — подана v0.3.1, статусы проверять.
 
-Детали — в STATE.md и TODO.md.
+Детали и история версий — в STATE.md и TODO.md.
 
 ## Ближайшие задачи
 
-1. Дождаться модерации RuStore; после публикации — написать Рустаму,
-   обновить скриншоты карточки (+ скриншот виджета), проверить email
-2. 4PDA: дождаться публикации, отвечать, собирать отчёты из регионов
-3. Собрать обратную связь по виджету, прежде чем городить новое
-4. v0.6 (кандидаты): локальный лог проверок с выгрузкой; доработка
-   вердикта UNKNOWN (см. TODO.md)
+1. RuStore: дождаться модерации v0.5.3; после публикации — написать
+   Рустаму, обновить скриншоты карточки (+ виджет), проверить email,
+   добавить ссылку на сайт
+2. Отвечать на отзывы RuStore; 4PDA — дождаться публикации, собирать
+   отчёты из регионов
+3. Роадмап (детали в TODO.md): v0.5.4 — оператор в чипе сети;
+   v0.6.0 — лог проверок + экран «История»; v0.7.0 — аналитика/паттерны;
+   доработка вердикта UNKNOWN
+4. Идея на будущее: редизайн онбординга (меньше текста, больше графики)
 5. Google Play — отложен
