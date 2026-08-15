@@ -85,61 +85,415 @@ html,body{max-width:100%;overflow-x:hidden}
   .remote-button{width:16px;height:6px}
 }
 
-/* Финальные стабильные правила после очистки каскада */
-html {
-  scroll-behavior: smooth;
-  scroll-padding-top: 88px;
-}
+/* Финальная адаптивная полировка */
+.tv-screen::after{display:none}
+.tv-screen img{object-fit:contain;background:#050a0f}
 
-img {
-  display: block;
-  max-width: 100%;
-}
-
-.hero-media img,
-.feature-shot {
-  object-fit: contain;
-  object-position: top center;
-}
-
-.hero-media img {
-  border-radius: 46px;
-  overflow: hidden;
-}
-
-.gallery {
-  display: flex;
-  gap: 18px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
-}
-
-.gallery::-webkit-scrollbar {
-  display: none;
-}
-
-.gallery figure {
-  flex: 0 0 260px;
-  width: 260px;
-  margin: 0;
-}
-
-.gallery img {
-  width: 100%;
-  height: auto;
-  aspect-ratio: auto;
-  object-fit: contain;
-  border-radius: 26px;
-}
-
-@media (max-width: 560px) {
-  .hero-media img {
-    border-radius: 30px;
+@media(max-width:560px){
+  /* Все статичные цветные блоки сохраняют одинаковый воздух по краям. */
+  .privacy,
+  .cta{
+    width:auto!important;
+    max-width:none!important;
+    margin-left:20px!important;
+    margin-right:20px!important;
   }
 
-  .feature-shot {
-    width: 100%;
-    height: auto;
+  /* Горизонтальные карусели начинаются и заканчиваются на одной линии с текстом. */
+  .gallery,
+  .widget-states{
+    width:100%;
+    margin-left:0;
+    margin-right:0;
+    padding-left:0;
+    padding-right:0;
+    scroll-padding-left:0;
+    scroll-padding-right:0;
+    overscroll-behavior-inline:contain;
+  }
+  .gallery figure:first-child,
+  .widget-state:first-child{margin-left:0}
+  .gallery figure:last-child,
+  .widget-state:last-child{margin-right:0}
+
+  /* Карточки возможностей не обрезаются у нижнего края. */
+  .card{overflow:hidden}
+  .card p{overflow-wrap:anywhere}
+
+  /* Блок Android TV и чистый экран телевизора. */
+  .tv-visual{padding:8px 18px 34px 0}
+  .tv-screen img{aspect-ratio:1500/850;object-fit:contain}
+
+  /* Более спокойная мобильная типографика в крупных блоках. */
+  .privacy h2{font-size:clamp(2.25rem,12vw,3.3rem)}
+  .cta h2{font-size:clamp(2rem,9vw,2.8rem)}
+}
+
+/* Финальные правки: favicon, единая ширина блоков, карусели и закреплённая шапка */
+html{scroll-padding-top:88px}
+.site-header{
+  position:sticky;
+  top:0;
+  z-index:1000;
+  box-shadow:0 8px 24px rgba(49,40,36,.08);
+}
+.brand{cursor:pointer}
+.brand:focus-visible{outline:3px solid var(--accent);outline-offset:4px;border-radius:14px}
+
+/* Цветные нижние блоки совпадают по внешней ширине с контентом секций выше. */
+.privacy,
+.cta{
+  width:calc(100% - 48px);
+  max-width:calc(var(--max) - 48px);
+  margin-left:auto!important;
+  margin-right:auto!important;
+}
+
+@media(max-width:560px){
+  html{scroll-padding-top:78px}
+  .site-header{padding:10px 16px}
+  .brand{gap:10px}
+  .brand img{width:42px;height:42px;border-radius:11px}
+  .brand span{font-size:1rem}
+
+  /* Статичные блоки оставляют обычные поля по 20 px. */
+  .privacy,
+  .cta{
+    width:calc(100% - 40px)!important;
+    max-width:none!important;
+    margin-left:auto!important;
+    margin-right:auto!important;
+  }
+
+  /* Движущиеся ленты занимают всю ширину экрана, а карточки прокручиваются от края до края. */
+  .gallery,
+  .widget-states{
+    width:100vw!important;
+    max-width:100vw!important;
+    margin-left:calc(50% - 50vw)!important;
+    margin-right:calc(50% - 50vw)!important;
+    padding-left:20px!important;
+    padding-right:20px!important;
+    scroll-padding-left:20px!important;
+    scroll-padding-right:20px!important;
+  }
+}
+
+/* Навигация в закреплённой шапке */
+.site-header{display:block;padding:0;background:rgba(255,250,247,.96);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.header-inner{width:100%;max-width:var(--max);min-height:72px;margin:0 auto;padding:10px 24px;display:flex;align-items:center;gap:24px}
+.brand{flex:0 0 auto;text-decoration:none}
+.desktop-nav{margin-left:auto;display:flex;align-items:center;gap:20px}
+.desktop-nav a{position:relative;color:var(--ink);font-size:.93rem;font-weight:650;text-decoration:none;white-space:nowrap}
+.desktop-nav a::after{content:"";position:absolute;left:0;right:0;bottom:-7px;height:2px;border-radius:2px;background:var(--brand);transform:scaleX(0);transform-origin:center;transition:transform .18s ease}
+.desktop-nav a:hover::after,.desktop-nav a:focus-visible::after{transform:scaleX(1)}
+.header-actions{display:flex;align-items:center;gap:12px}
+.header-download{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:0 18px;border-radius:14px;background:var(--brand);color:#fff;font-size:.92rem;font-weight:750;text-decoration:none;box-shadow:0 8px 22px rgba(86,58,52,.16);transition:transform .18s ease,box-shadow .18s ease}
+.header-download:hover{transform:translateY(-1px);box-shadow:0 11px 26px rgba(86,58,52,.22)}
+.menu-toggle{display:none;width:44px;height:44px;padding:10px;border:0;border-radius:14px;background:var(--surface);cursor:pointer;align-items:center;justify-content:center;flex-direction:column;gap:5px;color:var(--ink)}
+.menu-toggle span{display:block;width:22px;height:2px;border-radius:2px;background:currentColor;transition:transform .2s ease,opacity .2s ease}
+.menu-toggle[aria-expanded="true"] span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+.menu-toggle[aria-expanded="true"] span:nth-child(2){opacity:0}
+.menu-toggle[aria-expanded="true"] span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+.mobile-menu{border-top:1px solid var(--line);background:rgba(255,250,247,.98);box-shadow:0 18px 32px rgba(49,40,36,.12);padding:10px 16px 16px}
+.mobile-menu[hidden]{display:none}
+.mobile-menu a{display:flex;align-items:center;justify-content:center;text-align:center;min-height:45px;padding:0 14px;border-radius:12px;color:var(--ink);font-weight:650;text-decoration:none}
+.mobile-menu a:hover,.mobile-menu a:focus-visible{background:var(--surface)}
+.mobile-menu .mobile-download{margin-top:8px;justify-content:center;background:var(--brand);color:#fff}
+body.menu-open{overflow:hidden}
+
+@media(max-width:1080px){
+  .desktop-nav{gap:14px}
+  .desktop-nav a{font-size:.86rem}
+  .header-download{padding:0 14px}
+}
+
+@media(max-width:900px){
+  .header-inner{min-height:68px;padding:9px 18px}
+  .desktop-nav{display:none}
+  .header-actions{margin-left:auto}
+  .menu-toggle{display:flex}
+  .header-download{display:none}
+}
+
+@media(max-width:560px){
+  .header-inner{min-height:62px;padding:8px 14px}
+  .menu-toggle{width:42px;height:42px}
+  .mobile-menu{padding-left:12px;padding-right:12px}
+}
+@media(max-width:900px){.site-header .mobile-menu:not([hidden]){display:block}}
+
+
+/* Исправление v1.2.1: шапка всегда видна поверх страницы */
+body{padding-top:72px}
+.site-header{
+  position:fixed!important;
+  top:0;
+  left:0;
+  right:0;
+  width:100%;
+  z-index:10000;
+}
+@media(max-width:900px){body{padding-top:68px}}
+@media(max-width:560px){body{padding-top:62px}}
+
+
+/* 2026-08-15 — 9 screenshots: single-row slider + large screenshot fix */
+.gallery{
+  display:flex;
+  grid-template-columns:none;
+  gap:18px;
+  overflow-x:auto;
+  overflow-y:hidden;
+  padding:8px 4px 20px;
+  scroll-snap-type:x mandatory;
+  -webkit-overflow-scrolling:touch;
+}
+.gallery figure{
+  flex:0 0 220px;
+  width:220px;
+  min-width:220px;
+  margin:0;
+  scroll-snap-align:start;
+}
+.gallery img{
+  width:100%;
+  aspect-ratio:9/16;
+  object-fit:cover;
+  object-position:top;
+}
+
+/* В блоке «Как работает» портрет заполняет колонку без белых полос по бокам */
+.feature-shot{
+  display:block;
+  width:100%;
+  max-width:100%;
+  height:760px;
+  max-height:none;
+  object-fit:cover;
+  object-position:top;
+}
+
+@media(max-width:900px){
+  .feature-shot{
+    width:min(520px,100%);
+    height:auto;
+    aspect-ratio:9/16;
+    object-fit:cover;
+    margin-left:auto;
+    margin-right:auto;
+  }
+}
+
+@media(max-width:560px){
+  .gallery figure{
+    flex:0 0 min(78vw,290px);
+    width:min(78vw,290px);
+    min-width:min(78vw,290px);
+  }
+}
+
+
+/* 2026-08-15 v2 — screenshots keep their natural 9:16 proportions */
+.gallery figure{
+  flex:0 0 260px;
+  width:260px;
+  min-width:260px;
+}
+.gallery img{
+  display:block;
+  width:100%;
+  height:auto!important;
+  max-height:none!important;
+  aspect-ratio:auto!important;
+  object-fit:contain!important;
+  object-position:center top;
+}
+
+@media(max-width:560px){
+  .gallery figure{
+    flex:0 0 min(78vw,290px);
+    width:min(78vw,290px);
+    min-width:min(78vw,290px);
+  }
+  .gallery img{
+    height:auto!important;
+    aspect-ratio:auto!important;
+  }
+}
+
+
+/* 2026-08-15 — gallery navigation: swipe + desktop dots */
+.gallery{
+  scrollbar-width:none;
+  -ms-overflow-style:none;
+}
+.gallery::-webkit-scrollbar{
+  display:none;
+  width:0;
+  height:0;
+}
+
+.gallery-dots{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  margin:18px auto 0;
+  min-height:18px;
+}
+
+.gallery-dot{
+  width:8px;
+  height:8px;
+  padding:0;
+  border:0;
+  border-radius:999px;
+  background:rgba(86,58,52,.28);
+  cursor:pointer;
+  transition:width .2s ease, background .2s ease, transform .2s ease;
+}
+
+.gallery-dot:hover,
+.gallery-dot:focus-visible{
+  background:rgba(86,58,52,.55);
+  outline:none;
+}
+
+.gallery-dot.is-active{
+  width:28px;
+  background:var(--brand);
+}
+
+@media(max-width:560px){
+  .gallery-dots{
+    display:none;
+  }
+
+  .gallery{
+    scroll-snap-type:x mandatory;
+    touch-action:pan-x;
+  }
+}
+
+
+/* 2026-08-15 — gallery arrows on desktop, swipe on mobile */
+.gallery-dots{
+  display:none!important;
+}
+
+.gallery-shell{
+  position:relative;
+}
+
+.gallery{
+  scrollbar-width:none;
+  -ms-overflow-style:none;
+  scroll-behavior:smooth;
+}
+.gallery::-webkit-scrollbar{
+  display:none;
+  width:0;
+  height:0;
+}
+
+.gallery-arrow{
+  position:absolute;
+  top:50%;
+  z-index:5;
+  width:44px;
+  height:44px;
+  margin:0;
+  padding:0;
+  border:0;
+  border-radius:50%;
+  background:rgba(255,255,255,.88);
+  color:var(--ink);
+  box-shadow:0 6px 18px rgba(49,40,36,.16);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:32px;
+  line-height:1;
+  cursor:pointer;
+  transform:translateY(-50%);
+  transition:opacity .18s ease, transform .18s ease, background .18s ease;
+  backdrop-filter:blur(6px);
+}
+.gallery-arrow:hover,
+.gallery-arrow:focus-visible{
+  background:#fff;
+  transform:translateY(-50%) scale(1.05);
+  outline:none;
+}
+.gallery-arrow:disabled{
+  opacity:.22;
+  cursor:default;
+  pointer-events:none;
+}
+.gallery-arrow-prev{
+  left:-22px;
+}
+.gallery-arrow-next{
+  right:-22px;
+}
+
+@media(max-width:900px){
+  .gallery-arrow{
+    width:40px;
+    height:40px;
+    font-size:28px;
+  }
+  .gallery-arrow-prev{left:6px}
+  .gallery-arrow-next{right:6px}
+}
+
+@media(max-width:560px){
+  .gallery-arrow{
+    display:none;
+  }
+  .gallery{
+    touch-action:pan-x;
+    scroll-snap-type:x mandatory;
+  }
+}
+
+
+/* 2026-08-15 — slider arrows polish + mobile vertical scrolling */
+.gallery-arrow{
+  font-size:0;
+  opacity:1;
+  visibility:visible;
+  pointer-events:auto;
+}
+
+.gallery-arrow::before{
+  content:"";
+  width:10px;
+  height:10px;
+  border-top:2px solid currentColor;
+  border-right:2px solid currentColor;
+  display:block;
+}
+
+.gallery-arrow-prev::before{
+  transform:rotate(-135deg);
+  margin-left:4px;
+}
+
+.gallery-arrow-next::before{
+  transform:rotate(45deg);
+  margin-right:4px;
+}
+
+.gallery-arrow.is-hidden{
+  opacity:0;
+  visibility:hidden;
+  pointer-events:none;
+}
+
+@media(max-width:560px){
+  .gallery{
+    touch-action:auto;
   }
 }
