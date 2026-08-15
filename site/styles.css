@@ -497,3 +497,40 @@ body{padding-top:72px}
     touch-action:auto;
   }
 }
+
+
+/* 2026-08-16 — layout polish: hero width/corners + footer alignment */
+.hero-media img{
+  border-radius:46px;
+}
+
+@media(max-width:900px){
+  .hero-media{
+    width:100%;
+  }
+  .hero-media img{
+    width:100%;
+    max-width:100%;
+    height:auto;
+    max-height:none;
+  }
+}
+
+@media(max-width:560px){
+  .hero-media img{
+    border-radius:30px;
+  }
+}
+
+footer p{
+  margin:0;
+}
+
+@media(min-width:561px){
+  footer{
+    align-items:center;
+  }
+  footer div{
+    align-items:center;
+  }
+}
