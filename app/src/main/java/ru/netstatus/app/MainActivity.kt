@@ -691,15 +691,21 @@ fun App() {
     // Экран «Как остаться на связи?» — переоткрывается из подвала (та же
     // инструкция, что и второй шаг онбординга).
     var showHelp by remember { mutableStateOf(false) }
-    // Онбординг показываем только действительно свежей установке: нет ни
-    // флага onboarded, ни следов прежнего использования (bg_enabled /
-    // last_verdict). Обновившимся пользователям он не мешает.
+    // Онбординг — только по-настоящему первой установке и только один раз.
+    // «Первую установку» определяем НЕ по SharedPreferences (их может
+    // восстановить системный бэкап при переустановке — тогда признак
+    // «свежести» ломается и онбординг не покажется), а по времени: у свежей
+    // установки время первой установки совпадает со временем последнего
+    // обновления. У обновившихся они различаются — им онбординг не мешаем.
+    // Флаг onboarded не даёт показать экран повторно после прохождения.
+    val freshInstall = remember {
+        try {
+            val pi = context.packageManager.getPackageInfo(context.packageName, 0)
+            pi.firstInstallTime == pi.lastUpdateTime
+        } catch (e: Exception) { true }
+    }
     var showOnboarding by remember {
-        mutableStateOf(
-            !prefs.getBoolean("onboarded", false) &&
-                !prefs.contains("bg_enabled") &&
-                !prefs.contains("last_verdict")
-        )
+        mutableStateOf(!prefs.getBoolean("onboarded", false) && freshInstall)
     }
     // Состояние проверки живёт на уровне App, а НЕ внутри MainScreen:
     // при переходе в «Списки сайтов» MainScreen целиком покидает композицию,
@@ -905,7 +911,7 @@ fun MainScreen(
 
         VerdictCard(state)
 
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(12.dp))
 
         LazyColumn(Modifier.fillMaxWidth().weight(1f)) {
             // Чип сети скрыт во время проверки: тип сети в этот момент
@@ -919,7 +925,7 @@ fun MainScreen(
                         Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.Top
                     ) {
-                        Box(Modifier.weight(1f)) {
+                        Box(Modifier.weight(1f).align(Alignment.CenterVertically)) {
                             NetworkChip(state.networkType, netExpanded) { netExpanded = !netExpanded }
                         }
                         if (state.verdict != null) {
@@ -1577,7 +1583,7 @@ fun AppFooter(onOpenHelp: () -> Unit) {
         } catch (e: Exception) { "?" }
     }
     Column(
-        Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 24.dp),
+        Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         // Карточка «нет рекламы» + просьба об отзыве. Ненавязчиво, статично
@@ -1608,7 +1614,7 @@ fun AppFooter(onOpenHelp: () -> Unit) {
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        Spacer(Modifier.height(9.dp))
+        Spacer(Modifier.height(2.dp))
         Text(
             "Версия $version · проверить обновления",
             style = MaterialTheme.typography.bodySmall,
@@ -1618,16 +1624,28 @@ fun AppFooter(onOpenHelp: () -> Unit) {
                 .padding(horizontal = 6.dp, vertical = 2.dp)
                 .clickable { uriHandler.openUri(REPO_RELEASES) }
         )
-        Spacer(Modifier.height(9.dp))
-        Text(
-            "Как остаться на связи?",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.primary,
+        Spacer(Modifier.height(2.dp))
+        // Значок ⓘ вместо «?» — единообразно с чипом сети и «Почему ошибки».
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .tvFocusHighlight()
-                .padding(horizontal = 6.dp, vertical = 2.dp)
                 .clickable { onOpenHelp() }
-        )
+                .padding(horizontal = 6.dp, vertical = 2.dp)
+        ) {
+            Text(
+                "Как остаться на связи",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(Modifier.width(4.dp))
+            Icon(
+                Icons.Filled.Info,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(16.dp)
+            )
+        }
     }
 }
 
@@ -1720,19 +1738,17 @@ fun OnboardingFlow(onFinish: () -> Unit) {
     val prefs = remember { context.getSharedPreferences("netstatus", Context.MODE_PRIVATE) }
     var step by remember { mutableStateOf(1) }
 
-    val permLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { /* результат не критичен: без разрешения просто не будет уведомлений */ }
-
     if (step == 1) {
         // Назад на первом экране = пропустить онбординг.
         BackHandler { onFinish() }
         OnboardingWelcome(
             onEnable = {
+                // Включаем фоновую проверку и ведём на второй экран, где
+                // пользователь сам разрешит уведомления (кнопка «Разрешить»)
+                // и настроит батарею/автозапуск. Разрешение запрашиваем ТОЛЬКО
+                // там — иначе статус «Разрешено» на втором экране не совпадал бы
+                // с реальностью (запрос шёл из первого экрана мимо него).
                 prefs.edit().putBoolean("bg_enabled", true).apply()
-                if (Build.VERSION.SDK_INT >= 33) {
-                    permLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                }
                 scheduleBackground(context)
                 step = 2
             },
@@ -1763,7 +1779,7 @@ fun OnboardingWelcome(onEnable: () -> Unit, onLater: () -> Unit) {
         Text(
             "Покажет, что сейчас с интернетом: всё работает, включён белый " +
                 "список или пропал сигнал.",
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
         )
@@ -1776,7 +1792,7 @@ fun OnboardingWelcome(onEnable: () -> Unit, onLater: () -> Unit) {
             Column(Modifier.padding(16.dp)) {
                 Text(
                     "Фоновая проверка и уведомления",
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
@@ -1785,7 +1801,7 @@ fun OnboardingWelcome(onEnable: () -> Unit, onLater: () -> Unit) {
                     "Будем сами следить за связью и предупредим, когда начнётся " +
                         "ограничение — даже если приложение закрыто. Можно включить " +
                         "сейчас или позже.",
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -1866,7 +1882,7 @@ fun ConnectivityHelpScreen(onDone: () -> Unit, showBack: Boolean) {
         Text(
             "Телефон может сам останавливать приложения, которые работают в " +
                 "фоне. Пара настроек — и «Белый список?» продолжит следить за связью.",
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
@@ -1878,14 +1894,14 @@ fun ConnectivityHelpScreen(onDone: () -> Unit, showBack: Boolean) {
             Column(Modifier.padding(14.dp)) {
                 Text(
                     "Уведомления",
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
                     "Разрешите, чтобы получать предупреждение о начале ограничения.",
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(Modifier.height(8.dp))
@@ -1900,7 +1916,8 @@ fun ConnectivityHelpScreen(onDone: () -> Unit, showBack: Boolean) {
                         Spacer(Modifier.width(6.dp))
                         Text(
                             "Разрешено",
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
                             color = verdictColors(Verdict.NORMAL).content
                         )
                     }
@@ -1926,7 +1943,7 @@ fun ConnectivityHelpScreen(onDone: () -> Unit, showBack: Boolean) {
             Column(Modifier.padding(14.dp)) {
                 Text(
                     "Работа в фоне",
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
@@ -1934,7 +1951,7 @@ fun ConnectivityHelpScreen(onDone: () -> Unit, showBack: Boolean) {
                 Text(
                     "Откройте настройки приложения и разрешите автозапуск и работу " +
                         "без ограничений батареи.",
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(Modifier.height(8.dp))
@@ -1949,7 +1966,7 @@ fun ConnectivityHelpScreen(onDone: () -> Unit, showBack: Boolean) {
         Text(
             "На разных телефонах этот экран выглядит по-разному — это нормально. " +
                 "Если что-то не открылось, найдите приложение в настройках вручную.",
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 14.dp)
         )
