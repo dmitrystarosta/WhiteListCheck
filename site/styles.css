@@ -611,3 +611,17 @@ footer p{
     object-fit:contain;
   }
 }
+
+/* 2026-08-22 — hero screenshot alignment on desktop */
+@media(min-width:901px){
+  .hero-media{
+    justify-content:flex-end;
+  }
+}
+
+@media(max-width:900px){
+  .hero-media{
+    justify-content:center;
+  }
+}
+
