@@ -718,8 +718,14 @@ fun App() {
             pi.firstInstallTime == pi.lastUpdateTime
         } catch (e: Exception) { true }
     }
+    // На Android TV онбординг не показываем: экран рассчитан на телефон
+    // (разрешение уведомлений, настройки автозапуска/батареи), а пультом
+    // им пользоваться неудобно. Определяем ТВ по LEANBACK.
+    val isTv = remember {
+        context.packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
+    }
     var showOnboarding by remember {
-        mutableStateOf(!prefs.getBoolean("onboarded", false) && freshInstall)
+        mutableStateOf(!prefs.getBoolean("onboarded", false) && freshInstall && !isTv)
     }
     // Состояние проверки живёт на уровне App, а НЕ внутри MainScreen:
     // при переходе в «Списки сайтов» MainScreen целиком покидает композицию,
@@ -1609,17 +1615,19 @@ fun AppFooter(onOpenHelp: () -> Unit, scanTick: Long) {
             context.packageManager.getPackageInfo(context.packageName, 0).versionName
         } catch (e: Exception) { "?" }
     }
-    // Просьба об отзыве — ПО ТРИГГЕРУ: показываем только после 3 завершённых
-    // проверок (человек уже распробовал приложение и получил пользу) и убираем
-    // навсегда, как только он перешёл в магазин/на GitHub. При первом запуске
-    // карточки нет — не раздражаем «ничем лишним». scanTick = state.checkedAt:
-    // меняется после каждой проверки и заставляет футер перечитать scan_count
-    // (иначе Compose мог бы пропустить рекомпозицию футера и не показать карточку
-    // ровно на 3-й проверке).
+    // Просьба об отзыве — ПО ТРИГГЕРУ и в ОКНЕ: показываем на 3-й, 4-й и 5-й
+    // завершённой проверке (человек уже распробовал приложение). Если к 6-й
+    // так и не кликнул — прячем сами, чтобы не надоедать. Клик по RuStore/GitHub
+    // ставит review_dismissed и закрывает сразу. На ТВ не показываем вовсе —
+    // оставить отзыв там неудобно (нет нормального браузера/клавиатуры).
+    // scanTick = state.checkedAt: меняется после каждой проверки и заставляет
+    // футер перечитать scan_count (иначе Compose мог бы пропустить рекомпозицию
+    // и не показать/не скрыть карточку в нужный момент).
     val prefs = remember { context.getSharedPreferences("netstatus", Context.MODE_PRIVATE) }
+    val isTv = remember { context.packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK) }
     var reviewDismissed by remember { mutableStateOf(prefs.getBoolean("review_dismissed", false)) }
     val scanCount = remember(scanTick) { prefs.getInt("scan_count", 0) }
-    val showReview = scanCount >= 3 && !reviewDismissed
+    val showReview = scanCount in 3..5 && !reviewDismissed && !isTv
     Column(
         Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -1840,7 +1848,7 @@ fun OnboardingWelcome(onEnable: () -> Unit, onLater: () -> Unit) {
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    "Будем сами следить за связью и предупредим, когда начнётся " +
+                    "Будем сами проверять состояние сети и предупредим, когда начнётся " +
                         "ограничение — даже если приложение закрыто. Можно включить " +
                         "сейчас или позже.",
                     style = MaterialTheme.typography.bodyLarge,
@@ -1879,6 +1887,8 @@ fun OnboardingWelcome(onEnable: () -> Unit, onLater: () -> Unit) {
 @Composable
 fun ConnectivityHelpScreen(onDone: () -> Unit, showBack: Boolean) {
     val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences("netstatus", Context.MODE_PRIVATE) }
+    val isTv = remember { context.packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK) }
     val initiallyGranted = Build.VERSION.SDK_INT < 33 ||
         context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) ==
         PackageManager.PERMISSION_GRANTED
@@ -1923,7 +1933,8 @@ fun ConnectivityHelpScreen(onDone: () -> Unit, showBack: Boolean) {
         }
         Text(
             "Телефон может сам останавливать приложения, которые работают в " +
-                "фоне. Пара настроек — и «Белый список?» продолжит следить за связью.",
+                "фоне. Пара настроек — и «Белый список?» продолжит проверять " +
+                "состояние сети в фоне.",
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -2012,6 +2023,19 @@ fun ConnectivityHelpScreen(onDone: () -> Unit, showBack: Boolean) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 14.dp)
         )
+
+        // Блок «нет рекламы» + отзыв — постоянно, но ТОЛЬКО когда экран открыт
+        // из подвала (showBack), не на онбординге: на первом запуске просить
+        // оценку ещё не о чем. На ТВ не показываем (оставить отзыв там неудобно).
+        // Увеличенный отступ сверху визуально отделяет блок от инструкций.
+        // Клик по кнопке ставит review_dismissed — тогда и карточка на главной
+        // больше не появится.
+        if (showBack && !isTv) {
+            Spacer(Modifier.height(28.dp))
+            ReviewCard(onEngaged = {
+                prefs.edit().putBoolean("review_dismissed", true).apply()
+            })
+        }
 
         Spacer(Modifier.weight(1f))
         if (!showBack) {
