@@ -18,6 +18,7 @@
         android:label="Белый список?"
         android:icon="@drawable/ic_launcher"
         android:banner="@drawable/banner"
+        android:allowBackup="false"
         android:theme="@android:style/Theme.Material.Light.NoActionBar"
         android:usesCleartextTraffic="false">
         <!-- configChanges: при смене светлой/тёмной темы (uiMode) и повороте
