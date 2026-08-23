@@ -35,8 +35,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
@@ -1897,6 +1899,9 @@ fun ConnectivityHelpScreen(onDone: () -> Unit, showBack: Boolean) {
 
     Column(Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
         Spacer(Modifier.height(10.dp))
+        // Заголовок закреплён СВЕРХУ (не скроллится) — только когда экран открыт
+        // из подвала. Стиль один в один со «Списками сайтов»: стрелка со сдвигом
+        // -12dp + название titleLarge Bold. Общий вид у всех экранов с «назад».
         if (showBack) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(
@@ -1917,18 +1922,30 @@ fun ConnectivityHelpScreen(onDone: () -> Unit, showBack: Boolean) {
                 )
             }
             Spacer(Modifier.height(8.dp))
-        } else {
-            Spacer(Modifier.height(20.dp))
-            Text(
-                "Чтобы проверка не выключалась",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-            Spacer(Modifier.height(8.dp))
         }
-        Text(
-            "Телефон может сам останавливать приложения, которые работают в " +
+
+        // Прокручиваемая область: весь длинный контент едет здесь, поэтому текст
+        // больше не уезжает под кнопку, а блок отзыва достаётся скроллом. weight(1f)
+        // отдаёт ей всё место между закреплённым заголовком и кнопкой «Готово».
+        Column(
+            Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
+        ) {
+            // На онбординге (без стрелки «назад») крупный заголовок едет вместе
+            // с контентом — это приветственный экран, прибивать нечего.
+            if (!showBack) {
+                Spacer(Modifier.height(20.dp))
+                Text(
+                    "Чтобы проверка не выключалась",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                Spacer(Modifier.height(8.dp))
+            }
+            Text(
+                "Телефон может сам останавливать приложения, которые работают в " +
                 "фоне. Пара настроек — и «Белый список?» продолжит проверять " +
                 "состояние сети в фоне.",
             style = MaterialTheme.typography.bodyLarge,
@@ -2033,8 +2050,15 @@ fun ConnectivityHelpScreen(onDone: () -> Unit, showBack: Boolean) {
             })
         }
 
-        Spacer(Modifier.weight(1f))
+            // Нижний отступ внутри прокрутки, чтобы последний блок не прилипал
+            // к краю (или к кнопке «Готово») при докрутке донизу.
+            Spacer(Modifier.height(20.dp))
+        }
+
+        // Кнопка «Готово» ЗАКРЕПЛЕНА снизу (только на онбординге): всегда видна
+        // и не наезжает на текст — текст теперь скроллится над ней.
         if (!showBack) {
+            Spacer(Modifier.height(12.dp))
             Button(
                 onClick = onDone,
                 shape = RoundedCornerShape(14.dp),
@@ -2049,7 +2073,7 @@ fun ConnectivityHelpScreen(onDone: () -> Unit, showBack: Boolean) {
                     fontWeight = FontWeight.SemiBold
                 )
             }
+            Spacer(Modifier.height(20.dp))
         }
-        Spacer(Modifier.height(20.dp))
     }
 }
