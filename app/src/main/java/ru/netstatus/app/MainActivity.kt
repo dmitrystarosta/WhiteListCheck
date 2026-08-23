@@ -100,7 +100,7 @@ const val REPO_URL = "https://github.com/dmitrystarosta/WhiteListCheck"
 // ---------- Модель данных ----------
 
 data class Probe(val name: String, val url: String)
-data class ProbeResult(val probe: Probe, val ok: Boolean, val ms: Long, val note: String)
+data class ProbeResult(val probe: Probe, val ok: Boolean, val ms: Long, val note: String, val checking: Boolean = false)
 
 enum class Verdict { NO_INTERNET, WHITELIST, NORMAL, VPN_OR_ABROAD, UNKNOWN }
 
@@ -207,7 +207,8 @@ fun probeFromDomain(input: String): Probe? {
 object Scanner {
 
     // Лёгкий HTTPS-запрос. Считаем сайт доступным, если получили любой HTTP-ответ.
-    private suspend fun check(probe: Probe): ProbeResult = withContext(Dispatchers.IO) {
+    // public: runScan запускает пробы по одной, чтобы обновлять строки по мере ответа.
+    suspend fun check(probe: Probe): ProbeResult = withContext(Dispatchers.IO) {
         val start = System.currentTimeMillis()
         try {
             val conn = URL(probe.url).openConnection() as HttpURLConnection
@@ -787,7 +788,10 @@ fun MainScreen(
         ActivityResultContracts.RequestPermission()
     ) { /* результат не критичен: без разрешения просто не будет уведомлений */ }
 
-    fun runScan() {
+    // countsForReview: пользовательская проверка (кнопка «Проверить») увеличивает
+    // счётчик для блока «Отзывы». Тихая пересинхронизация при возврате в приложение
+    // вызывает runScan(false) — она не должна накручивать счётчик.
+    fun runScan(countsForReview: Boolean = true) {
         scope.launch {
             state = state.copy(running = true, verdict = null)
             try {
@@ -821,12 +825,14 @@ fun MainScreen(
                 if (net == "нет сети") {
                     val mark = { p: Probe -> ProbeResult(p, false, 0L, "нет сети") }
                     val now = System.currentTimeMillis()
-                    prefs.edit()
+                    val editor = prefs.edit()
                         .putString("last_verdict", Verdict.NO_INTERNET.name)
                         .putLong("last_check_ts", now)
-                        // Счётчик завершённых проверок (для триггера карточки отзыва).
-                        .putInt("scan_count", prefs.getInt("scan_count", 0) + 1)
-                        .apply()
+                    // Счётчик для блока «Отзывы» — только на пользовательские проверки.
+                    if (countsForReview) {
+                        editor.putInt("scan_count", prefs.getInt("scan_count", 0) + 1)
+                    }
+                    editor.apply()
                     StatusWidgetUpdater.update(context)
                     state = ScanState(
                         running = false,
@@ -843,29 +849,66 @@ fun MainScreen(
                 // SIM метод вернул бы имя, и оно ложно вылезло бы в чипе).
                 val operator = if (net == "мобильный интернет") Scanner.operatorName(context) else ""
 
-                val ra = Scanner.scanGroup(a)
-                val rb = Scanner.scanGroup(b)
-                val rc = Scanner.scanGroup(c)
+                // Показываем карточки групп СРАЗУ: каждый сайт помечен «проверяется»
+                // (checking=true) — справа от названия крутится индикатор. Проверка
+                // параллельная (как и была); по мере ответа каждого сайта его строка
+                // обновляется, и крутилка сменяется галочкой/крестиком.
+                fun seed(list: List<Probe>) =
+                    list.map { ProbeResult(it, false, 0L, "", checking = true) }
+                state = state.copy(
+                    running = true,
+                    verdict = null,
+                    networkType = net,
+                    operator = operator,
+                    groupA = seed(a), groupB = seed(b), groupC = seed(c),
+                    configSource = source
+                )
+
+                // Запускаем все пробы разом. Каждая по завершении обновляет СВОЮ
+                // строку в state (крутилка → результат). Мы на Main-диспетчере, а
+                // read-modify-write состояния синхронный (без suspend внутри), поэтому
+                // параллельные обновления не теряются.
+                coroutineScope {
+                    val groups = listOf('A' to a, 'B' to b, 'C' to c)
+                    for ((key, probes) in groups) {
+                        for (probe in probes) {
+                            launch {
+                                val r = Scanner.check(probe)
+                                fun upd(list: List<ProbeResult>) = list.map {
+                                    if (it.probe.url == r.probe.url && it.checking) r else it
+                                }
+                                state = when (key) {
+                                    'A' -> state.copy(groupA = upd(state.groupA))
+                                    'B' -> state.copy(groupB = upd(state.groupB))
+                                    else -> state.copy(groupC = upd(state.groupC))
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Все строки разрешены — берём финальные результаты из state.
+                val ra = state.groupA
+                val rb = state.groupB
+                val rc = state.groupC
                 val verdict = Scanner.verdict(ra, rb, rc)
 
                 // Запоминаем вердикт (для сравнения фоновой проверкой) и время
                 // проверки (для виджета), затем обновляем виджет на рабочем столе.
                 val now = System.currentTimeMillis()
-                prefs.edit()
+                val editor = prefs.edit()
                     .putString("last_verdict", verdict.name)
                     .putLong("last_check_ts", now)
-                    // Счётчик завершённых проверок (для триггера карточки отзыва).
-                    .putInt("scan_count", prefs.getInt("scan_count", 0) + 1)
-                    .apply()
+                // Счётчик для блока «Отзывы» — только на пользовательские проверки.
+                if (countsForReview) {
+                    editor.putInt("scan_count", prefs.getInt("scan_count", 0) + 1)
+                }
+                editor.apply()
                 StatusWidgetUpdater.update(context)
 
-                state = ScanState(
+                state = state.copy(
                     running = false,
-                    networkType = net,
-                    operator = operator,
                     verdict = verdict,
-                    groupA = ra, groupB = rb, groupC = rc,
-                    configSource = source,
                     checkedAt = now
                 )
             } finally {
@@ -896,7 +939,9 @@ fun MainScreen(
                     storedV != null && storedTs > cur.checkedAt &&
                     storedV != cur.verdict.name
                 ) {
-                    runScan()
+                    // Тихая пересинхронизация — не пользовательская проверка,
+                    // счётчик блока «Отзывы» не трогаем.
+                    runScan(countsForReview = false)
                 }
             }
         }
@@ -1164,6 +1209,7 @@ fun ShareVerdictButton(state: ScanState) {
 @Composable
 fun GroupCard(title: String, rows: List<ProbeResult>, expanded: Boolean, onToggle: () -> Unit) {
     val ok = rows.count { it.ok }
+    val checking = rows.any { it.checking }
     Surface(
         Modifier.fillMaxWidth().padding(top = 12.dp),
         shape = RoundedCornerShape(16.dp),
@@ -1185,7 +1231,7 @@ fun GroupCard(title: String, rows: List<ProbeResult>, expanded: Boolean, onToggl
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        "$ok/${rows.size} доступны",
+                        if (checking) "проверка…" else "$ok/${rows.size} доступны",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -1477,7 +1523,19 @@ fun ProbeRow(r: ProbeResult) {
         Modifier.fillMaxWidth().padding(vertical = 3.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        StatusBadge(r.ok)
+        // Пока сайт проверяется — крутящийся индикатор на месте значка; как только
+        // приходит ответ, checking=false и на его месте появляется галочка/крестик.
+        if (r.checking) {
+            Box(Modifier.size(22.dp), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(16.dp),
+                    strokeWidth = 2.dp,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+        } else {
+            StatusBadge(r.ok)
+        }
         Spacer(Modifier.width(8.dp))
         Text(
             r.probe.name,
@@ -1491,7 +1549,7 @@ fun ProbeRow(r: ProbeResult) {
         // weight(1f) отдаёт тексту всё оставшееся место, textAlign = End
         // прижимает к правому краю обе строки, если текст ошибки перенёсся.
         Text(
-            if (r.ok) "${r.ms} мс" else r.note,
+            if (r.checking) "проверка…" else if (r.ok) "${r.ms} мс" else r.note,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.End,
