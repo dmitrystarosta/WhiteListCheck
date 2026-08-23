@@ -17,6 +17,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.telephony.TelephonyManager
 import android.text.format.DateFormat
 import android.view.View
 import android.widget.RemoteViews
@@ -104,6 +105,8 @@ enum class Verdict { NO_INTERNET, WHITELIST, NORMAL, VPN_OR_ABROAD, UNKNOWN }
 data class ScanState(
     val running: Boolean = false,
     val networkType: String = "",
+    // Имя оператора мобильной сети; пусто, если сеть не мобильная или нет SIM.
+    val operator: String = "",
     val verdict: Verdict? = null,
     val groupA: List<ProbeResult> = emptyList(), // белый список / всегда доступные
     val groupB: List<ProbeResult> = emptyList(), // обычный интернет вне списка
@@ -245,6 +248,17 @@ object Scanner {
             else -> "другое"
         }
     }
+
+    // Имя оператора мобильной сети (например «Tele2», «МТС»). Не требует
+    // опасных разрешений — getNetworkOperatorName() доступен без READ_PHONE_STATE.
+    // Возвращает имя ОБСЛУЖИВАЮЩЕЙ сети (учитывает роуминг), а не SIM.
+    // ВАЖНО: вызывать только когда реально мобильный интернет — при Wi-Fi
+    // со вставленной SIM метод всё равно вернёт оператора, и он ложно вылез бы
+    // в чипе. Гейт по типу сети делается на стороне вызова (см. runScan).
+    fun operatorName(context: Context): String = try {
+        val tm = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
+        tm.networkOperatorName?.trim().orEmpty()
+    } catch (e: Exception) { "" }
 
     // Вердикт по большинству: один упавший сайт не должен давать ложную тревогу.
     fun verdict(a: List<ProbeResult>, b: List<ProbeResult>, c: List<ProbeResult>): Verdict {
@@ -806,6 +820,8 @@ fun MainScreen(
                     prefs.edit()
                         .putString("last_verdict", Verdict.NO_INTERNET.name)
                         .putLong("last_check_ts", now)
+                        // Счётчик завершённых проверок (для триггера карточки отзыва).
+                        .putInt("scan_count", prefs.getInt("scan_count", 0) + 1)
                         .apply()
                     StatusWidgetUpdater.update(context)
                     state = ScanState(
@@ -819,6 +835,10 @@ fun MainScreen(
                     return@launch
                 }
 
+                // Оператор читаем только для мобильной сети (на Wi-Fi со вставленной
+                // SIM метод вернул бы имя, и оно ложно вылезло бы в чипе).
+                val operator = if (net == "мобильный интернет") Scanner.operatorName(context) else ""
+
                 val ra = Scanner.scanGroup(a)
                 val rb = Scanner.scanGroup(b)
                 val rc = Scanner.scanGroup(c)
@@ -830,12 +850,15 @@ fun MainScreen(
                 prefs.edit()
                     .putString("last_verdict", verdict.name)
                     .putLong("last_check_ts", now)
+                    // Счётчик завершённых проверок (для триггера карточки отзыва).
+                    .putInt("scan_count", prefs.getInt("scan_count", 0) + 1)
                     .apply()
                 StatusWidgetUpdater.update(context)
 
                 state = ScanState(
                     running = false,
                     networkType = net,
+                    operator = operator,
                     verdict = verdict,
                     groupA = ra, groupB = rb, groupC = rc,
                     configSource = source,
@@ -926,7 +949,7 @@ fun MainScreen(
                         verticalAlignment = Alignment.Top
                     ) {
                         Box(Modifier.weight(1f).align(Alignment.CenterVertically)) {
-                            NetworkChip(state.networkType, netExpanded) { netExpanded = !netExpanded }
+                            NetworkChip(state.networkType, state.operator, netExpanded) { netExpanded = !netExpanded }
                         }
                         if (state.verdict != null) {
                             ShareVerdictButton(state)
@@ -1002,7 +1025,7 @@ fun MainScreen(
                 item { GroupCard("Заблокированные в РФ (контроль)", state.groupC, expC) { expC = !expC } }
                 item { Footnote(whyExpanded) { whyExpanded = !whyExpanded } }
             }
-            item { AppFooter(onOpenHelp) }
+            item { AppFooter(onOpenHelp, state.checkedAt) }
         }
     }
 }
@@ -1010,7 +1033,7 @@ fun MainScreen(
 // Чип типа сети. Если для сети есть пояснение — рядом значок ⓘ,
 // по тапу пояснение разворачивается и сворачивается.
 @Composable
-fun NetworkChip(networkType: String, expanded: Boolean, onToggle: () -> Unit) {
+fun NetworkChip(networkType: String, operator: String, expanded: Boolean, onToggle: () -> Unit) {
 
     val detail: String?
     val color: Color
@@ -1042,6 +1065,10 @@ fun NetworkChip(networkType: String, expanded: Boolean, onToggle: () -> Unit) {
         }
     }
 
+    // Для мобильной сети дописываем оператора: «мобильный интернет · Tele2».
+    val label = if (operator.isNotBlank()) "Сеть: $networkType · $operator"
+                else "Сеть: $networkType"
+
     Column {
         Surface(
             shape = RoundedCornerShape(50),
@@ -1056,7 +1083,7 @@ fun NetworkChip(networkType: String, expanded: Boolean, onToggle: () -> Unit) {
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
             ) {
                 Text(
-                    "Сеть: $networkType",
+                    label,
                     style = MaterialTheme.typography.bodySmall,
                     color = color
                 )
@@ -1574,7 +1601,7 @@ fun AppLogoMark(modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun AppFooter(onOpenHelp: () -> Unit) {
+fun AppFooter(onOpenHelp: () -> Unit, scanTick: Long) {
     val uriHandler = LocalUriHandler.current
     val context = LocalContext.current
     val version = remember {
@@ -1582,16 +1609,31 @@ fun AppFooter(onOpenHelp: () -> Unit) {
             context.packageManager.getPackageInfo(context.packageName, 0).versionName
         } catch (e: Exception) { "?" }
     }
+    // Просьба об отзыве — ПО ТРИГГЕРУ: показываем только после 3 завершённых
+    // проверок (человек уже распробовал приложение и получил пользу) и убираем
+    // навсегда, как только он перешёл в магазин/на GitHub. При первом запуске
+    // карточки нет — не раздражаем «ничем лишним». scanTick = state.checkedAt:
+    // меняется после каждой проверки и заставляет футер перечитать scan_count
+    // (иначе Compose мог бы пропустить рекомпозицию футера и не показать карточку
+    // ровно на 3-й проверке).
+    val prefs = remember { context.getSharedPreferences("netstatus", Context.MODE_PRIVATE) }
+    var reviewDismissed by remember { mutableStateOf(prefs.getBoolean("review_dismissed", false)) }
+    val scanCount = remember(scanTick) { prefs.getInt("scan_count", 0) }
+    val showReview = scanCount >= 3 && !reviewDismissed
     Column(
         Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Карточка «нет рекламы» + просьба об отзыве. Ненавязчиво, статично
-        // (не всплывающее окно): просит оценку, не раздражая.
-        ReviewCard()
-
-        // Равные отступы сверху и снизу от логотипа.
-        Spacer(Modifier.height(22.dp))
+        // Карточка «нет рекламы» + просьба об отзыве. Показываем по триггеру
+        // (см. showReview выше). Нажатие на любую кнопку прячет карточку навсегда.
+        if (showReview) {
+            ReviewCard(onEngaged = {
+                prefs.edit().putBoolean("review_dismissed", true).apply()
+                reviewDismissed = true
+            })
+            // Отступ до логотипа — только когда карточка показана.
+            Spacer(Modifier.height(22.dp))
+        }
         // Небольшой логотип приложения — ненавязчивая подпись бренда.
         // Векторный знак без плитки, подстраивается под тему. Тап —
         // открывает сайт приложения.
@@ -1655,7 +1697,7 @@ fun AppFooter(onOpenHelp: () -> Unit) {
 // марка GitHub — тонируется темой (Icon + tint), чтобы быть видимой и на
 // светлой, и на тёмной теме.
 @Composable
-fun ReviewCard() {
+fun ReviewCard(onEngaged: () -> Unit) {
     val uriHandler = LocalUriHandler.current
     Surface(
         Modifier.fillMaxWidth(),
@@ -1672,7 +1714,7 @@ fun ReviewCard() {
             Spacer(Modifier.height(12.dp))
             Row {
                 OutlinedButton(
-                    onClick = { uriHandler.openUri(RUSTORE_URL) },
+                    onClick = { onEngaged(); uriHandler.openUri(RUSTORE_URL) },
                     shape = RoundedCornerShape(12.dp),
                     contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
                     modifier = Modifier.weight(1f).tvFocusHighlight(RoundedCornerShape(12.dp))
@@ -1687,7 +1729,7 @@ fun ReviewCard() {
                 }
                 Spacer(Modifier.width(10.dp))
                 OutlinedButton(
-                    onClick = { uriHandler.openUri(REPO_URL) },
+                    onClick = { onEngaged(); uriHandler.openUri(REPO_URL) },
                     shape = RoundedCornerShape(12.dp),
                     contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
                     modifier = Modifier.weight(1f).tvFocusHighlight(RoundedCornerShape(12.dp))
