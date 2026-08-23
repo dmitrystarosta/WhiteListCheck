@@ -1,7 +1,7 @@
 # PROJECT.md
 
 Техническая документация проекта WhiteListCheck. Меняется редко.
-Актуально на v0.5.3 (versionCode 15).
+Актуально на v0.5.4 (versionCode 16).
 
 ## Описание проекта
 
@@ -31,7 +31,9 @@ Kotlin-файле (~1980 строк). Виджет — на RemoteViews (Compose
   подвала, кнопки «поделиться» и блока отзыва
 - `Probe`, `ProbeResult`, `Verdict`, `ScanState` — модель. В ScanState
   есть поле `checkedAt` (время получения показанного результата) — нужно
-  для синхронизации с виджетом, см. ниже
+  для синхронизации с виджетом, см. ниже — и `operator` (имя мобильного
+  оператора, v0.5.4). `ProbeResult` имеет флаг `checking` (v0.5.4) — строка
+  «проверяется», рисуется крутилкой до прихода ответа
 
 **Списки сайтов**
 - `ProbeConfig` — встроенные списки (defaultA/B/C), константа
@@ -96,12 +98,15 @@ Kotlin-файле (~1980 строк). Виджет — на RemoteViews (Compose
 - `AppFooter` — логотип-ссылка на сайт (SITE_URL), версия из PackageManager
   (ссылка REPO_RELEASES), копирайт, `ReviewCard`, ссылка
   «Как остаться на связи ⓘ»
-- `ReviewCard` (v0.5.3) — блок «в приложении нет рекламы» + две кнопки:
-  RuStore (Image, ic_rustore.xml, без тонировки) и GitHub (Icon с tint
-  по теме, ic_github.xml)
+- `ReviewCard` (v0.5.3; `onEngaged` v0.5.4) — блок «в приложении нет рекламы»
+  + две кнопки: RuStore (Image, ic_rustore.xml, без тонировки) и GitHub
+  (Icon с tint по теме, ic_github.xml). Показ по триггеру (см. scan_count);
+  в подвале главной и на «Как остаться на связи» из подвала; не на ТВ (v0.5.4)
 - `OnboardingFlow` / `OnboardingWelcome` / `ConnectivityHelpScreen`
   (v0.5.3) — онбординг первого запуска и переоткрываемая из подвала
-  инструкция; `openAppSettings` — переход в настройки приложения
+  инструкция; `openAppSettings` — переход в настройки приложения. Все длинные
+  экраны прокручиваются (`weight(1f)+verticalScroll`), кнопки закреплены;
+  на ТВ онбординг не показывается (v0.5.4)
 
 ## Ключевые решения по состоянию (не ломать)
 
@@ -119,12 +124,30 @@ Kotlin-файле (~1980 строк). Виджет — на RemoteViews (Compose
   не трогаем. LocalLifecycleOwner берётся из
   androidx.compose.ui.platform (в Compose 1.7+ переехал
   в androidx.lifecycle.compose).
-- **Онбординг — по времени установки, не по prefs** (v0.5.3):
-  freshInstall = firstInstallTime==lastUpdateTime + флаг onboarded.
-  Системный бэкап Android восстанавливает SharedPreferences при
-  переустановке, поэтому «свежесть» по ним ненадёжна. Разрешение
-  уведомлений запрашивается только на 2-м экране онбординга (иначе статус
-  «Разрешено» не совпадал бы с реальностью).
+- **Онбординг — по флагу `onboarded` + `allowBackup="false"`** (v0.5.4,
+  ЗАМЕНЯЕТ подход v0.5.3). Раньше показ определялся по
+  `firstInstallTime == lastUpdateTime` — на части прошивок это давало `false`
+  даже на чистой установке (и очистка данных не сбрасывала времена), из-за
+  чего онбординг не появлялся. Теперь бэкап отключён в манифесте
+  (`android:allowBackup="false"`) — prefs реально стираются при удалении/
+  очистке и НЕ восстанавливаются, — а показ гейтится просто по флагу
+  `onboarded` (+ `!isTv`). Чистая установка/очистка → онбординг; обновление
+  поверх → нет. Разрешение уведомлений запрашивается только на 2-м экране
+  онбординга (иначе статус «Разрешено» не совпадал бы с реальностью).
+- **Оператор — отдельное поле `ScanState.operator`** (v0.5.4), НЕ склеивать
+  в `networkType`: иначе ломается `when(networkType)` (цвет/пояснение чипа).
+  Читать только когда `net == "мобильный интернет"` (на Wi-Fi с SIM метод
+  вернул бы имя ложно). Тот же формат — в `shareVerdict`.
+- **Живая индикация — обновления строк на Main-диспетчере** (v0.5.4):
+  `runScan` засеивает сайты `checking=true` и апдейтит каждую строку по мере
+  ответа пробы. `state = state.copy(...)` синхронный (без suspend) на
+  Main-scope → параллельные апдейты не теряются. `scanGroup` (bulk) оставлен
+  для фона/виджета, где поштучная индикация не нужна.
+- **Счётчик отзыва `scan_count` — только пользовательские проверки** (v0.5.4):
+  инкремент лишь в `runScan(countsForReview=true)` от кнопки «Проверить»;
+  фон/виджет и тихая ON_RESUME-пересинхронизация (`countsForReview=false`)
+  не считаются. Блок виден в окне `scan_count in 3..5`, прячется после 6 или
+  по клику (`review_dismissed`).
 
 ## SharedPreferences "netstatus"
 
@@ -135,9 +158,14 @@ Kotlin-файле (~1980 строк). Виджет — на RemoteViews (Compose
 | last_check_ts | время последней проверки, мс — для виджета и синхронизации |
 | custom_lists | пользовательские списки сайтов (JSON) |
 | onboarded | показан ли онбординг первого запуска (v0.5.3) |
+| scan_count | счётчик пользовательских проверок на главной — для триггера блока отзыва (v0.5.4) |
+| review_dismissed | скрыт ли блок отзыва навсегда после клика по RuStore/GitHub (v0.5.4) |
 
-Пишут все три пути проверки: ручная (runScan), фоновая (CheckWorker)
-и виджет (WidgetScanWorker).
+`last_verdict` / `last_check_ts` пишут все три пути проверки: ручная
+(runScan), фоновая (CheckWorker) и виджет (WidgetScanWorker). `scan_count`
+пишет только ручная проверка от кнопки (см. «Ключевые решения»).
+Примечание: `allowBackup="false"` (v0.5.4) — эти prefs НЕ переживают
+удаление/очистку данных и переустановку (бэкап отключён намеренно).
 
 ## Структура каталогов
 
@@ -180,10 +208,11 @@ WhiteListCheck/
 - **AndroidManifest.xml** — разрешения INTERNET, ACCESS_NETWORK_STATE,
   POST_NOTIFICATIONS; label «Белый список?»; icon @drawable/ic_launcher;
   banner для ТВ; theme @android:style/Theme.Material.Light.NoActionBar;
-  usesCleartextTraffic="false"; **configChanges="uiMode|orientation|
-  screenSize"** (смена темы и поворот не пересоздают Activity);
-  LEANBACK_LAUNCHER + uses-feature required=false (Android TV);
-  receiver StatusWidget с APPWIDGET_UPDATE и meta-data widget_info.
+  usesCleartextTraffic="false"; **`allowBackup="false"`** (v0.5.4 — prefs не
+  восстанавливаются из системного бэкапа, показ онбординга предсказуем);
+  **configChanges="uiMode|orientation|screenSize"** (смена темы и поворот
+  не пересоздают Activity); LEANBACK_LAUNCHER + uses-feature required=false
+  (Android TV); receiver StatusWidget с APPWIDGET_UPDATE и meta-data widget_info.
 - **widget_status.xml** — разметка виджета. ТОЛЬКО RemoteViews-
   совместимые view: LinearLayout, ImageView (widget_icon), TextView
   (widget_time), ProgressBar (widget_progress, indeterminate, скрыт
