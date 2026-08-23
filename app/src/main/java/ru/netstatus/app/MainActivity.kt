@@ -1872,6 +1872,16 @@ fun OnboardingWelcome(onEnable: () -> Unit, onLater: () -> Unit) {
         Modifier.fillMaxSize().padding(horizontal = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // Контент прокручивается: на маленьких экранах (напр. HTC U11) и при
+        // крупном системном шрифте он больше не упирается в кнопку «Включить».
+        // Кнопки «Включить»/«Позже» закреплены снизу (см. ниже).
+        Column(
+            Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
         Spacer(Modifier.height(48.dp))
         AppLogoMark(Modifier.size(96.dp))
         Spacer(Modifier.height(16.dp))
@@ -1912,7 +1922,11 @@ fun OnboardingWelcome(onEnable: () -> Unit, onLater: () -> Unit) {
                 )
             }
         }
-        Spacer(Modifier.weight(1f))
+            // Нижний отступ внутри прокрутки, чтобы карточка не прилипала к кнопке.
+            Spacer(Modifier.height(20.dp))
+        }
+
+        // Кнопки закреплены снизу — всегда видны, не наезжают на текст.
         Button(
             onClick = onEnable,
             shape = RoundedCornerShape(14.dp),
