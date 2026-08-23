@@ -1172,7 +1172,11 @@ fun shareVerdict(context: Context, state: ScanState) {
     }
     val time = java.text.SimpleDateFormat("dd.MM.yyyy 'в' HH:mm", java.util.Locale("ru"))
         .format(java.util.Date())
-    val text = "$verdictText. Сеть: ${state.networkType}. " +
+    // Сеть в том же виде, что и в чипе: «мобильный интернет · Tele2».
+    // Оператор есть только для мобильной сети; иначе строка без него.
+    val net = if (state.operator.isNotBlank()) "${state.networkType} · ${state.operator}"
+              else state.networkType
+    val text = "$verdictText. Сеть: $net. " +
         "Проверено $time приложением „Белый список?“: $SITE_URL"
     val intent = Intent(Intent.ACTION_SEND).apply {
         type = "text/plain"
