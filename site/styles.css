@@ -745,3 +745,333 @@ footer > div a.footer-external::after{
     gap:12px 22px;
   }
 }
+
+
+/* 2026-08-24 — политика сайта, cookie-consent и обновлённый футер */
+.site-footer{
+  align-items:flex-start;
+  gap:28px;
+}
+.footer-copyright{
+  flex:0 0 auto;
+}
+.footer-stack{
+  display:flex;
+  flex:1 1 auto;
+  min-width:0;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:10px;
+}
+.site-footer .footer-links,
+.site-footer .footer-documents{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:flex-end;
+  gap:10px 24px;
+  min-width:0;
+}
+.site-footer .footer-links a,
+.site-footer .footer-documents a{
+  white-space:normal;
+}
+.site-footer .footer-documents{
+  font-size:.92rem;
+}
+.site-footer .footer-documents a{
+  text-decoration:underline;
+  text-decoration-color:rgba(109,92,85,.35);
+  text-underline-offset:4px;
+}
+.site-footer .footer-documents a:hover{
+  color:var(--brand);
+  text-decoration-color:currentColor;
+}
+
+.consent-banner{
+  position:fixed;
+  left:20px;
+  right:20px;
+  bottom:20px;
+  z-index:2000;
+  max-width:760px;
+  margin:0 auto;
+  padding:0;
+  border:1px solid rgba(86,58,52,.18);
+  border-radius:22px;
+  background:rgba(255,250,247,.98);
+  box-shadow:0 20px 60px rgba(49,40,36,.22);
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+}
+.consent-banner__inner{
+  display:flex;
+  align-items:center;
+  gap:22px;
+  padding:18px 20px;
+}
+.consent-banner p{
+  flex:1 1 auto;
+  min-width:0;
+  margin:0;
+  color:var(--muted);
+  font-size:.95rem;
+  line-height:1.5;
+}
+.consent-banner__actions{
+  display:flex;
+  flex:0 0 auto;
+  align-items:center;
+  gap:12px;
+}
+.consent-banner__details{
+  color:var(--brand);
+  font-weight:700;
+  text-decoration:underline;
+  text-underline-offset:4px;
+}
+.consent-banner__accept{
+  min-height:42px;
+  padding:0 18px;
+  border:0;
+  border-radius:13px;
+  background:var(--brand);
+  color:#fff;
+  font:inherit;
+  font-weight:750;
+  cursor:pointer;
+}
+.consent-banner__accept:hover{
+  filter:brightness(1.08);
+}
+.consent-banner__accept:focus-visible,
+.consent-banner__details:focus-visible{
+  outline:3px solid var(--accent);
+  outline-offset:3px;
+}
+
+/* Внутренние страницы */
+.inner-header .header-inner{
+  justify-content:space-between;
+}
+.inner-header .brand{
+  color:var(--ink);
+}
+.inner-home-link{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:42px;
+  padding:0 16px;
+  border:1px solid var(--line);
+  border-radius:14px;
+  color:var(--brand);
+  font-size:.92rem;
+  font-weight:750;
+  text-decoration:none;
+  background:#fff;
+}
+.inner-home-link:hover{
+  background:var(--surface);
+}
+.document-main{
+  width:100%;
+  max-width:960px;
+  margin:0 auto;
+  padding:72px 24px 84px;
+}
+.document-hero{
+  margin-bottom:42px;
+}
+.document-hero h1{
+  max-width:900px;
+  margin:0;
+  font-size:clamp(2.4rem,5vw,4.6rem);
+  line-height:1.05;
+  letter-spacing:-.04em;
+}
+.document-lead{
+  max-width:760px;
+  margin:22px 0 0;
+  color:var(--muted);
+  font-size:1.12rem;
+}
+.policy-card{
+  padding:34px 38px;
+  border:1px solid var(--line);
+  border-radius:28px;
+  background:#fff;
+  box-shadow:0 16px 46px rgba(67,42,35,.06);
+}
+.policy-card section+section{
+  margin-top:38px;
+  padding-top:34px;
+  border-top:1px solid var(--line);
+}
+.policy-card h2{
+  margin:0 0 14px;
+  font-size:1.55rem;
+  line-height:1.2;
+}
+.policy-card p,
+.policy-card li{
+  color:var(--muted);
+}
+.policy-card p{
+  margin:10px 0;
+}
+.policy-card ul{
+  margin:12px 0;
+  padding-left:22px;
+}
+.policy-card a{
+  color:var(--brand);
+  font-weight:650;
+  overflow-wrap:anywhere;
+}
+.policy-note{
+  margin-top:28px;
+  padding:20px 22px;
+  border-radius:18px;
+  background:var(--surface);
+  color:var(--muted);
+}
+.policy-meta{
+  margin-top:28px;
+  color:var(--muted);
+  font-size:.92rem;
+}
+
+/* 404 */
+.error-main{
+  min-height:calc(100vh - 230px);
+  display:grid;
+  place-items:center;
+  padding:72px 24px;
+}
+.error-card{
+  width:min(720px,100%);
+  text-align:center;
+  padding:54px 34px;
+  border:1px solid var(--line);
+  border-radius:34px;
+  background:linear-gradient(180deg,#fff 0,#f9efea 100%);
+  box-shadow:0 22px 60px rgba(67,42,35,.09);
+}
+.error-code{
+  margin:0;
+  color:#8c5e50;
+  font-size:clamp(5rem,16vw,9rem);
+  font-weight:900;
+  line-height:.85;
+  letter-spacing:-.07em;
+}
+.error-card h1{
+  margin:24px 0 10px;
+  font-size:clamp(2rem,5vw,3.2rem);
+  line-height:1.08;
+}
+.error-text{
+  max-width:540px;
+  margin:0 auto;
+  color:var(--muted);
+  font-size:1.08rem;
+}
+.error-actions{
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
+  gap:12px;
+  margin-top:28px;
+}
+.error-primary,
+.error-secondary{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:46px;
+  padding:0 18px;
+  border-radius:14px;
+  font-weight:750;
+  text-decoration:none;
+}
+.error-primary{
+  background:var(--brand);
+  color:#fff;
+}
+.error-secondary{
+  border:1px solid var(--line);
+  background:#fff;
+  color:var(--brand);
+}
+
+@media(max-width:760px){
+  .site-footer{
+    align-items:flex-start;
+  }
+  .footer-stack{
+    width:100%;
+    align-items:flex-start;
+  }
+  .site-footer .footer-links,
+  .site-footer .footer-documents{
+    width:100%;
+    justify-content:flex-start;
+  }
+}
+
+@media(max-width:560px){
+  .consent-banner{
+    left:12px;
+    right:12px;
+    bottom:12px;
+    border-radius:18px;
+  }
+  .consent-banner__inner{
+    align-items:stretch;
+    flex-direction:column;
+    gap:14px;
+    padding:16px;
+  }
+  .consent-banner__actions{
+    justify-content:space-between;
+  }
+  .consent-banner__accept{
+    min-width:112px;
+  }
+  .inner-header .header-inner{
+    min-height:68px;
+  }
+  .inner-header .brand span{
+    font-size:1rem;
+  }
+  .inner-home-link{
+    min-height:40px;
+    padding:0 13px;
+    font-size:.86rem;
+  }
+  .document-main{
+    padding:52px 20px 66px;
+  }
+  .document-hero{
+    margin-bottom:28px;
+  }
+  .document-hero h1{
+    font-size:2.35rem;
+  }
+  .policy-card{
+    padding:26px 22px;
+    border-radius:24px;
+  }
+  .policy-card h2{
+    font-size:1.35rem;
+  }
+  .error-main{
+    padding:48px 20px;
+  }
+  .error-card{
+    padding:42px 22px;
+    border-radius:28px;
+  }
+}
