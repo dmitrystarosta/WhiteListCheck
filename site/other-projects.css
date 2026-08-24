@@ -1,0 +1,92 @@
+/* Другие проекты */
+.other-projects{
+  max-width:var(--max);
+  margin:0 auto 34px;
+  padding:0 24px;
+}
+
+.other-projects-label{
+  margin:0 0 14px;
+  color:var(--muted);
+  font-size:.78rem;
+  font-weight:800;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+}
+
+.other-project-card{
+  display:flex;
+  align-items:center;
+  gap:20px;
+  max-width:620px;
+  padding:22px 24px;
+  border:1px solid var(--line);
+  border-radius:24px;
+  background:rgba(245,233,226,.55);
+  color:var(--ink);
+  text-decoration:none;
+  transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;
+}
+
+.other-project-card:hover,
+.other-project-card:focus-visible{
+  transform:translateY(-2px);
+  border-color:rgba(86,58,52,.38);
+  box-shadow:0 14px 32px rgba(67,42,35,.10);
+  outline:none;
+}
+
+.other-project-icon{
+  flex:0 0 80px;
+  width:80px;
+  height:80px;
+  border-radius:20px;
+}
+
+.other-project-copy{
+  display:flex;
+  min-width:0;
+  flex-direction:column;
+  gap:4px;
+}
+
+.other-project-copy strong{
+  font-size:1.22rem;
+  font-weight:800;
+}
+
+.other-project-copy>span:not(.other-project-url){
+  color:var(--muted);
+  line-height:1.45;
+}
+
+.other-project-url{
+  margin-top:4px;
+  color:#496f97;
+  font-weight:700;
+}
+
+@media(max-width:560px){
+  .other-projects{
+    margin-bottom:28px;
+    padding:0 20px;
+  }
+
+  .other-project-card{
+    width:100%;
+    gap:16px;
+    padding:18px;
+    border-radius:22px;
+  }
+
+  .other-project-icon{
+    flex-basis:72px;
+    width:72px;
+    height:72px;
+    border-radius:18px;
+  }
+
+  .other-project-copy strong{
+    font-size:1.08rem;
+  }
+}
