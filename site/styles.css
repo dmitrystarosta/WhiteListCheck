@@ -717,3 +717,31 @@ footer p{
     font-size:1.08rem;
   }
 }
+
+/* 2026-08-24 — внешние ссылки футера + перенос */
+footer > div{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:flex-end;
+  gap:12px 24px;
+  min-width:0;
+}
+
+footer > div a{
+  white-space:nowrap;
+}
+
+footer > div a.footer-external::after{
+  content:" ↗";
+  font-size:.78em;
+  vertical-align:.08em;
+}
+
+@media(max-width:760px){
+  footer > div{
+    width:100%;
+    justify-content:flex-start;
+    gap:12px 22px;
+  }
+}
