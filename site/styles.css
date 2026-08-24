@@ -853,6 +853,10 @@ footer > div a.footer-external::after{
 
 /* Внутренние страницы */
 .inner-header .header-inner{
+  max-width:1200px;
+}
+
+.inner-header .header-inner{
   justify-content:space-between;
 }
 .inner-header .brand{
