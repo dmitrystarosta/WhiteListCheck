@@ -1,0 +1,13 @@
+White List? is a free, open-source network diagnostic tool. When you have a signal but only some sites load, it helps you tell what is going on.
+
+It sends lightweight HTTPS probes to several groups of websites and gives a probabilistic verdict:
+- All good — unrestricted access
+- Looks like a whitelist — only an allowed set of resources is reachable
+- No Internet — no connectivity at all
+- Looks like a VPN (outside your country) — traffic appears to exit elsewhere
+
+It is a diagnostic tool, not a VPN or a bypass tool. It unblocks nothing — it only checks reachability and reports a likely state.
+
+Features: home-screen widget, background monitoring with change notifications, per-site live status, operator detection, Android TV support, light and dark themes.
+
+Privacy: only INTERNET, ACCESS_NETWORK_STATE and POST_NOTIFICATIONS permissions. No ads, no trackers, no proprietary dependencies.
