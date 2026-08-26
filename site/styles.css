@@ -1082,3 +1082,17 @@ footer > div a.footer-external::after{
     overflow:visible;
   }
 }
+
+/* Ссылка на разработчика в копирайте */
+.footer-copyright-link{
+  color:inherit;
+  text-decoration:none;
+}
+.footer-copyright-link:hover{
+  color:var(--brand);
+}
+.footer-copyright-link:focus-visible{
+  outline:3px solid var(--accent);
+  outline-offset:3px;
+  border-radius:4px;
+}
