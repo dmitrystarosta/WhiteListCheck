@@ -1,0 +1,1 @@
+Detect whitelist-only mobile Internet with lightweight HTTPS probes.
