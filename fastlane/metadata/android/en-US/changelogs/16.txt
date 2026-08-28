@@ -1,1 +1,6 @@
-
+- Mobile network operator now shown in the status chip (e.g. "mobile internet · Tele2"); hidden on Wi-Fi.
+- Live scan indicators: each site shows a spinner that turns into a check or cross as replies arrive.
+- Review prompt is now unobtrusive — shows only after a few checks, then hides itself.
+- Onboarding and "How to stay connected?" screens now scroll on small screens.
+- Android TV: phone-only screens removed.
+- First-run welcome now shows reliably on all devices.
