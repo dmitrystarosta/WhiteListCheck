@@ -1197,3 +1197,20 @@ footer > div a.footer-external::after{
     box-shadow:0 24px 60px rgba(0,0,0,.32);
   }
 }
+
+
+/* 2026-08-31 — HeadInspect card: improved contrast in dark theme */
+@media (prefers-color-scheme: dark){
+  .other-project-card{
+    background:#211d1b;
+    border-color:#4a403c;
+  }
+  .other-project-card:hover,
+  .other-project-card:focus-visible{
+    border-color:rgba(226,173,155,.42);
+    box-shadow:0 14px 32px rgba(0,0,0,.24);
+  }
+  .other-project-copy strong{color:#f5ece8;}
+  .other-project-copy>span:not(.other-project-url){color:#cfc2bc;}
+  .other-project-url{color:#8bbce5;}
+}
