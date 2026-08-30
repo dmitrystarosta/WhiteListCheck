@@ -1096,3 +1096,104 @@ footer > div a.footer-external::after{
   outline-offset:3px;
   border-radius:4px;
 }
+
+
+/* 2026-08-30 — automatic dark theme (follows the operating system) */
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#151312;
+    --surface:#211d1b;
+    --ink:#f5ece8;
+    --muted:#c8b9b2;
+    --brand:#765148;
+    --accent:#e2ad9b;
+    --green:#263d29;
+    --green-ink:#a9dca9;
+    --line:#443934;
+  }
+
+  body{
+    background:linear-gradient(180deg,#171412 0,#12100f 48%,#181412 100%);
+  }
+
+  .site-header{
+    background:rgba(23,20,18,.94);
+    border-bottom-color:rgba(226,173,155,.12);
+  }
+  .desktop-nav a:hover,
+  .site-header nav a:hover,
+  .footer-copyright-link:hover,
+  .site-footer .footer-documents a:hover,
+  .consent-banner__details,
+  .inner-home-link,
+  .policy-card a,
+  .error-secondary{
+    color:var(--accent);
+  }
+  .desktop-nav a::after{
+    background:var(--accent);
+  }
+
+  .trust-strip,
+  .card .icon,
+  .tv-points div,
+  .inner-home-link,
+  .policy-card,
+  .error-secondary{
+    background:#1d1917;
+  }
+  .card .icon{
+    color:var(--accent);
+  }
+
+  .note{
+    background:#302919;
+    border-color:#685a2c;
+    color:#ead99a;
+  }
+
+  .glow{
+    background:radial-gradient(circle,rgba(226,173,155,.28) 0,rgba(226,173,155,.07) 58%,transparent 72%);
+  }
+
+  .privacy{
+    background:#4d3630;
+  }
+  .privacy p{
+    color:#eadcd5;
+  }
+
+  .gallery-arrow{
+    background:rgba(38,32,29,.92);
+    color:var(--ink);
+    box-shadow:0 6px 18px rgba(0,0,0,.28);
+  }
+  .gallery-arrow:hover,
+  .gallery-arrow:focus-visible{
+    background:#302925;
+  }
+
+  .mobile-menu,
+  .consent-banner{
+    background:rgba(27,23,21,.98);
+  }
+  .consent-banner{
+    border-color:var(--line);
+    box-shadow:0 20px 60px rgba(0,0,0,.38);
+  }
+
+  .error-card{
+    background:linear-gradient(180deg,#211d1b 0,#181513 100%);
+  }
+  .error-code,
+  .eyebrow{
+    color:#d49a87;
+  }
+
+  .hero-media img,
+  .feature-shot,
+  .gallery img,
+  .widget-preview{
+    box-shadow:0 24px 60px rgba(0,0,0,.32);
+  }
+}
