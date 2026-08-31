@@ -1223,7 +1223,7 @@ footer > div a.footer-external::after{
 
 @media (prefers-color-scheme: dark){
   .badge-link--rustore img{
-    border-color:rgba(226,173,155,.52);
+    border-color:#fff;
   }
 }
 
