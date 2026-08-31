@@ -1214,3 +1214,17 @@ footer > div a.footer-external::after{
   .other-project-copy>span:not(.other-project-url){color:#cfc2bc;}
   .other-project-url{color:#8bbce5;}
 }
+
+/* 2026-08-31 — RuStore badge outline */
+.badge-link--rustore{
+  border-radius:14px;
+  outline:1px solid rgba(86,58,52,.22);
+  outline-offset:2px;
+}
+
+@media (prefers-color-scheme: dark){
+  .badge-link--rustore{
+    outline-color:rgba(226,173,155,.32);
+  }
+}
+
