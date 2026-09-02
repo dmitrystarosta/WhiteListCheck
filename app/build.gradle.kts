@@ -35,7 +35,6 @@ android {
         versionName = "0.5.4"
     }
 
-
     dependenciesInfo {
         includeInApk = false
         includeInBundle = false
