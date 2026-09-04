@@ -1,0 +1,1 @@
+Fixed the check hanging when the device is connected but has no internet access (an outage at the provider, a router with no upstream connection). The check now always finishes and shows a result. The same fix applies to background checks and the widget.
