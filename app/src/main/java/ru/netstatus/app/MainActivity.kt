@@ -206,9 +206,38 @@ fun probeFromDomain(input: String): Probe? {
 
 object Scanner {
 
-    // Лёгкий HTTPS-запрос. Считаем сайт доступным, если получили любой HTTP-ответ.
+    // Потолок ожидания одной пробы и всего скана (мс).
+    // Зачем нужны: connectTimeout/readTimeout у HttpURLConnection НЕ покрывают
+    // разрешение имени (DNS). Если линк есть, а выход наружу лежит (кабель воткнут,
+    // но WAN мёртв — типовая ситуация на Android TV), резолвер может висеть
+    // неограниченно долго. Блокирующий сокет корутиной не отменяется, поэтому
+    // без этих потолков coroutineScope ждал пробы вечно и экран навсегда
+    // застревал в «Сканирую…».
+    const val PROBE_TIMEOUT_MS = 10_000L
+    const val SCAN_TIMEOUT_MS = 25_000L
+    const val TIMEOUT_NOTE = "нет ответа (таймаут)"
+
+    // Отдельный scope для блокирующих проб. КРИТИЧНО: он НЕ дочерний тому, кто
+    // вызывает check(). Если бы блокирующий withContext(Dispatchers.IO) был
+    // ребёнком, withTimeoutOrNull всё равно ждал бы его завершения (структурная
+    // конкурентность дожидается детей), и потолок не сработал бы. Здесь же
+    // ожидание идёт через await() — обычную отменяемую приостановку, поэтому
+    // вызывающий освобождается вовремя, а зависший поток доживает сам по себе
+    // и тихо собирается сборщиком мусора. SupervisorJob: исключение брошенной
+    // пробы остаётся в её Deferred и никого не роняет.
+    private val probeScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    // Лёгкий HTTPS-запрос с жёстким потолком времени.
     // public: runScan запускает пробы по одной, чтобы обновлять строки по мере ответа.
-    suspend fun check(probe: Probe): ProbeResult = withContext(Dispatchers.IO) {
+    suspend fun check(probe: Probe): ProbeResult {
+        val start = System.currentTimeMillis()
+        val work = probeScope.async { rawCheck(probe) }
+        return withTimeoutOrNull(PROBE_TIMEOUT_MS) { work.await() }
+            ?: ProbeResult(probe, false, System.currentTimeMillis() - start, TIMEOUT_NOTE)
+    }
+
+    // Сам сетевой запрос. Считаем сайт доступным, если получили любой HTTP-ответ.
+    private suspend fun rawCheck(probe: Probe): ProbeResult = withContext(Dispatchers.IO) {
         val start = System.currentTimeMillis()
         try {
             val conn = URL(probe.url).openConnection() as HttpURLConnection
@@ -233,6 +262,9 @@ object Scanner {
         else -> e.javaClass.simpleName
     }
 
+    // Групповая проверка для фона и виджета. Время ограничено сверху потолком
+    // каждой пробы (PROBE_TIMEOUT_MS) — воркер больше не может зависнуть до
+    // 10-минутного лимита WorkManager, как это было при мёртвом выходе в сеть.
     suspend fun scanGroup(probes: List<Probe>): List<ProbeResult> = coroutineScope {
         probes.map { async { check(it) } }.awaitAll()
     }
@@ -868,24 +900,45 @@ fun MainScreen(
                 // строку в state (крутилка → результат). Мы на Main-диспетчере, а
                 // read-modify-write состояния синхронный (без suspend внутри), поэтому
                 // параллельные обновления не теряются.
-                coroutineScope {
-                    val groups = listOf('A' to a, 'B' to b, 'C' to c)
-                    for ((key, probes) in groups) {
-                        for (probe in probes) {
-                            launch {
-                                val r = Scanner.check(probe)
-                                fun upd(list: List<ProbeResult>) = list.map {
-                                    if (it.probe.url == r.probe.url && it.checking) r else it
-                                }
-                                state = when (key) {
-                                    'A' -> state.copy(groupA = upd(state.groupA))
-                                    'B' -> state.copy(groupB = upd(state.groupB))
-                                    else -> state.copy(groupC = upd(state.groupC))
+                // Общий потолок на весь скан — вторая линия обороны поверх потолка
+                // каждой пробы. Внутри мы ждём Scanner.check(), а это обычная
+                // отменяемая приостановка, поэтому таймаут снимает ожидание честно.
+                withTimeoutOrNull(Scanner.SCAN_TIMEOUT_MS) {
+                    coroutineScope {
+                        val groups = listOf('A' to a, 'B' to b, 'C' to c)
+                        for ((key, probes) in groups) {
+                            for (probe in probes) {
+                                launch {
+                                    val r = Scanner.check(probe)
+                                    fun upd(list: List<ProbeResult>) = list.map {
+                                        if (it.probe.url == r.probe.url && it.checking) r else it
+                                    }
+                                    state = when (key) {
+                                        'A' -> state.copy(groupA = upd(state.groupA))
+                                        'B' -> state.copy(groupB = upd(state.groupB))
+                                        else -> state.copy(groupC = upd(state.groupC))
+                                    }
                                 }
                             }
                         }
                     }
                 }
+
+                // Добиваем строки, не успевшие ответить к общему потолку: крутилка
+                // не должна остаться висеть. Для вердикта такая строка = недоступен.
+                fun sweep(list: List<ProbeResult>) = list.map {
+                    if (it.checking) it.copy(
+                        checking = false,
+                        ok = false,
+                        ms = Scanner.SCAN_TIMEOUT_MS,
+                        note = Scanner.TIMEOUT_NOTE
+                    ) else it
+                }
+                state = state.copy(
+                    groupA = sweep(state.groupA),
+                    groupB = sweep(state.groupB),
+                    groupC = sweep(state.groupC)
+                )
 
                 // Все строки разрешены — берём финальные результаты из state.
                 val ra = state.groupA
