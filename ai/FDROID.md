@@ -2,10 +2,11 @@
 
 История и правила публикации «Белый список?» (ru.netstatus.app) в F-Droid.
 Отдельный документ, потому что процесс F-Droid сильно отличается от RuStore/GitHub.
-Последнее обновление: 04.09.2026.
+Последнее обновление: 05.09.2026.
 
-**Статус: практически готово** — воспроизводимая сборка сошлась, все проверки
-F-Droid зелёные, MR стоит в очереди на ревью/мёрж. Дальше — ожидание.
+**Статус: практически готово** — воспроизводимая сборка сошлась, MR стоит
+в очереди на ревью/мёрж. 05.09.2026 рецепт обновлён с 0.5.4 на 0.5.5.
+Дальше — ожидание.
 
 ---
 
@@ -18,9 +19,10 @@ F-Droid зелёные, MR стоит в очереди на ревью/мёрж
 - **Файл метаданных:** `metadata/ru.netstatus.app.yml` (в форке, ветка `ru.netstatus.app`)
 - **Отпечаток сертификата подписи (публичный, не секрет):**
   `5844d644b893d299a59cf2ccdc97937eddcadcb635c4afebd8d2b3c0f7e90933`
-- **Ключевой коммit сборки:** `3db0b1910f9a4a8fa5ab20ea093f656e46ec55f7` —
-  из него собран публичный `WhiteListCheck_v0.5.4.apk` И его же собирает
+- **Ключевой коммит сборки (актуальный):** тег `v0.5.5` = `8c38195` —
+  из него собран публичный `WhiteListCheck_v0.5.5.apk` И его же собирает
   F-Droid ⇒ сборка воспроизводима, приложение пойдёт **с подписью автора**.
+  (Предыдущий рецепт указывал `3db0b191…` для 0.5.4.)
 - **Участники MR:** `linsui` — мейнтейнер F-Droid (ведёт MR, запускает
   настоящие пайплайны); `duckniii/seeker` — репортёр заявки RFP (советы).
 
@@ -67,17 +69,21 @@ F-Droid зелёные, MR стоит в очереди на ревью/мёрж
    later. If everything works well we'll merge it» и предупредил, что очередь
    длинная.
 
-## Текущее состояние (04.09.2026)
+## Текущее состояние (05.09.2026)
 
-- ✅ Все настоящие джобы F-Droid зелёные (`fdroid build`, `rewritemeta`,
-  `schema validation`, `checkupdates`, `lint`, и т.д.).
-- ✅ Воспроизводимость подтверждена: публичный APK содержит
-  `revision: 3db0b191…`, F-Droid собирает `commit: 3db0b191…` — совпадает.
-- ✅ MR в статусе `review-requested` + `reproducible-builds`.
-- ⏳ **Осталось только ждать**, пока F-Droid дойдёт до MR в очереди
-  (недели, возможно месяц-два — очередь длинная), протестирует и **смёржит**.
-  После мёржа приложение соберётся на их build-сервере и появится в каталоге
-  через ~сутки-двое, с подписью автора.
+- ✅ Все настоящие джобы F-Droid были зелёные на 0.5.4 (`fdroid build`,
+  `rewritemeta`, `schema validation`, `checkupdates`, `lint`).
+- 🔄 **05.09.2026 рецепт синхронизирован с v0.5.5** (по правилу linsui,
+  см. ниже): в `Builds:` блок 0.5.4 ЗАМЕНЁН на 0.5.5 (публикации ещё не было,
+  держать старую сборку незачем), `versionCode: 17`, `CurrentVersion: 0.5.5`,
+  `CurrentVersionCode: 17`. В `commit:` указано **имя тега `v0.5.5`**, а не
+  хэш — F-Droid его разрешает, и `checkupdates` при `AutoUpdateMode: Version`
+  сам подставляет в будущие блоки именно имена тегов.
+- ✅ Changelog'и добавлены в репозиторий приложения:
+  `fastlane/metadata/android/ru-RU/changelogs/17.txt` и `en-US/changelogs/17.txt`.
+  **Важно:** они попали в коммит `8c38195`, на который и переставлен тег.
+- ⏳ **Осталось только ждать** прогона и мёржа. Настоящий пайплайн запускает
+  linsui; форк-пайплайны красные всегда (0 jobs) — это шум.
 
 ## Правило linsui на время ожидания
 
@@ -122,7 +128,15 @@ RuStore, GitHub) + пользователям придётся переуста�
   когда дойдёт черёд.
 - `AutoUpdateMode` только `Version` (не `Version v%v`).
 - `AutoName: Белый список?` — должен присутствовать (иначе `checkupdates` падает).
-- F-Droid читает fastlane-метаданные из собираемого коммита.
+- F-Droid читает fastlane-метаданные из собираемого коммита. **Следствие:
+  changelog `<versionCode>.txt` должен лежать в репозитории ДО тегирования.**
+  В v0.5.5 забыли — changelog'и легли в main уже после тега, пришлось удалять
+  релиз, потом тег (в таком порядке: пока релиз опубликован, «Delete tag»
+  неактивен) и создавать заново на нужном коммите. Тег в GitHub переставить
+  нельзя, только пересоздать.
+- **В `commit:` можно указывать имя тега** (`v0.5.5`), не только хэш. Это
+  согласуется с `AutoUpdateMode: Version`: `checkupdates` сам подставляет
+  имена тегов в новые build-блоки.
 
 ## Итоговый файл metadata/ru.netstatus.app.yml (текущий)
 
@@ -140,19 +154,21 @@ AutoName: Белый список?
 
 RepoType: git
 Repo: https://github.com/dmitrystarosta/WhiteListCheck.git
-Binaries: https://github.com/dmitrystarosta/WhiteListCheck/releases/download/v%v/WhiteListCheck_v%v.apk
+Binaries: 
+  https://github.com/dmitrystarosta/WhiteListCheck/releases/download/v%v/WhiteListCheck_v%v.apk
 
 Builds:
-  - versionName: 0.5.4
-    versionCode: 16
-    commit: 3db0b1910f9a4a8fa5ab20ea093f656e46ec55f7
+  - versionName: 0.5.5
+    versionCode: 17
+    commit: v0.5.5
     subdir: app
     gradle:
       - yes
 
 AllowedAPKSigningKeys: 5844d644b893d299a59cf2ccdc97937eddcadcb635c4afebd8d2b3c0f7e90933
+
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
-CurrentVersion: 0.5.4
-CurrentVersionCode: 16
+CurrentVersion: 0.5.5
+CurrentVersionCode: 17
 ```
