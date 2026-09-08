@@ -22,19 +22,25 @@ jobs:
           keyAlias=${{ secrets.KEY_ALIAS }}
           keyPassword=${{ secrets.KEY_PASSWORD }}
           EOF
-      - name: Build release APK
+      - name: Build release APK and AAB
         run: |
           if [ ! -f gradlew ]; then
             gradle wrapper --gradle-version 8.11.1
           fi
           chmod +x gradlew
-          ./gradlew assembleRelease
+          ./gradlew assembleRelease bundleRelease
       - name: Rename APK with version
         run: |
           VERSION=$(grep 'versionName' app/build.gradle.kts | sed 's/[^0-9.]//g')
           cp app/build/outputs/apk/release/app-release.apk "WhiteListCheck_v${VERSION}.apk"
+          cp app/build/outputs/bundle/release/app-release.aab "WhiteListCheck_v${VERSION}.aab"
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: WhiteListCheck
           path: WhiteListCheck_v*.apk
+      - name: Upload AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: WhiteListCheck-aab
+          path: WhiteListCheck_v*.aab
