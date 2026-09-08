@@ -22,6 +22,7 @@ import android.text.format.DateFormat
 import android.view.View
 import android.widget.RemoteViews
 import androidx.activity.ComponentActivity
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -61,7 +62,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalUriHandler
@@ -685,8 +685,12 @@ fun AppTheme(content: @Composable () -> Unit) {
         SideEffect {
             val window = (view.context as? Activity)?.window
             if (window != null) {
-                window.statusBarColor = colors.background.toArgb()
-                window.navigationBarColor = colors.background.toArgb()
+                // Цвета системных панелей больше не задаём: начиная с Android 15
+                // window.statusBarColor / navigationBarColor не действуют, а при
+                // targetSdk 36 приложение всегда рисуется под панелями (edge-to-edge
+                // отключить нельзя). Фон под панелями даёт Surface приложения.
+                // Здесь остаётся только выбор светлых/тёмных значков панелей —
+                // он работает на всех версиях.
                 val insets = WindowCompat.getInsetsController(window, view)
                 insets.isAppearanceLightStatusBars = !dark
                 insets.isAppearanceLightNavigationBars = !dark
@@ -720,6 +724,11 @@ fun Modifier.tvFocusHighlight(shape: Shape = RoundedCornerShape(10.dp)): Modifie
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Явный edge-to-edge: на Android 15+ с targetSdk 35+ система включает его
+        // сама и отключить нельзя, а вызов здесь делает поведение одинаковым и на
+        // более старых версиях — то, что видно на телефоне, будет видно и на ТВ.
+        // Отступы на высоту системных панелей даёт safeDrawingPadding() в App().
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContent { AppTheme { App() } }
     }
@@ -769,7 +778,14 @@ fun App() {
     // «Проверяю…» (running=true снять было бы уже некому). Со scope уровня
     // App проверка спокойно доработает, пока пользователь в настройках.
     val appScope = rememberCoroutineScope()
+    // Surface закрашивает весь экран, включая области под системными панелями:
+    // при edge-to-edge приложение рисуется от края до края, и без сплошного фона
+    // за статус-баром просвечивал бы белый фон окна (в тёмной теме — заметно).
+    // Содержимое при этом отодвинуто от панелей внутренним Box с
+    // safeDrawingPadding(): шапка не уезжает под часы, подвал — под навигационную
+    // полосу. safeDrawing учитывает также вырез камеры и клавиатуру.
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+      Box(Modifier.fillMaxSize().safeDrawingPadding()) {
         when {
             showOnboarding -> OnboardingFlow(
                 onFinish = {
@@ -786,6 +802,7 @@ fun App() {
                 onOpenHelp = { showHelp = true }
             )
         }
+      }
     }
 }
 
