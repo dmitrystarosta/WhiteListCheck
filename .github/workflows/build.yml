@@ -25,6 +25,45 @@ jobs:
       - name: Build release APK
         run: |
           if [ ! -f gradlew ]; then
+            gradle wrapper --gradle-version 8.11.1
+          fi
+          chmod +x gradlew
+          ./gradlew assembleRelease
+      - name: Rename APK with version
+        run: |
+          VERSION=$(grep 'versionName' app/build.gradle.kts | sed 's/[^0-9.]//g')
+          cp app/build/outputs/apk/release/app-release.apk "WhiteListCheck_v${VERSION}.apk"
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: WhiteListCheck
+          path: WhiteListCheck_v*.apkname: Build APK
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Prepare keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > release.jks
+          cat > keystore.properties << EOF
+          storeFile=../release.jks
+          storePassword=${{ secrets.KEYSTORE_PASSWORD }}
+          keyAlias=${{ secrets.KEY_ALIAS }}
+          keyPassword=${{ secrets.KEY_PASSWORD }}
+          EOF
+      - name: Build release APK
+        run: |
+          if [ ! -f gradlew ]; then
             gradle wrapper --gradle-version 8.7
           fi
           chmod +x gradlew
