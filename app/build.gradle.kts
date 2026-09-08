@@ -30,7 +30,7 @@ android {
     defaultConfig {
         applicationId = "ru.netstatus.app"
         minSdk = 26
-        targetSdk = 34
+        targetSdk = 36
         versionCode = 17
         versionName = "0.5.5"
     }
