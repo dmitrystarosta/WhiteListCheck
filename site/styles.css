@@ -1227,3 +1227,103 @@ footer > div a.footer-external::after{
   }
 }
 
+
+/* 2026-09-09 — набор тестировщиков для Google Play (временный блок) */
+.testers-bar{
+  max-width:var(--max);
+  margin:18px auto 0;
+  padding:18px 26px;
+  background:var(--brand);
+  border-radius:22px;
+  display:flex;
+  align-items:center;
+  gap:18px;
+  flex-wrap:wrap;
+}
+.testers-bar p{
+  margin:0;
+  flex:1;
+  min-width:240px;
+  color:#f6ece8;
+  font-size:1rem;
+  line-height:1.5;
+}
+.testers-bar-tag{
+  flex:none;
+  background:var(--accent);
+  color:#4a2f29;
+  font-size:.74rem;
+  font-weight:800;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+  padding:6px 13px;
+  border-radius:999px;
+  white-space:nowrap;
+}
+.testers-bar-btn{
+  flex:none;
+  background:#fff8f5;
+  color:#4a2f29;
+  font-weight:700;
+  font-size:.95rem;
+  padding:12px 21px;
+  border-radius:14px;
+  text-decoration:none;
+  white-space:nowrap;
+  transition:transform .18s ease,background .18s ease;
+}
+.testers-bar-btn:hover{transform:translateY(-2px);background:#fff}
+
+.testers-card{padding-top:0;padding-bottom:0;margin-bottom:70px}
+.testers-card-inner{
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:34px;
+  padding:44px 48px;
+}
+.testers-card-eyebrow{
+  margin:0 0 10px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  font-size:.78rem;
+  font-weight:800;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  color:#a8503a;
+}
+.testers-card-eyebrow span{
+  width:9px;height:9px;border-radius:50%;
+  background:#c0563f;flex:none;
+}
+.testers-card h2{margin:0 0 14px;font-size:1.65rem}
+.testers-card p{margin:0 0 14px;color:var(--muted);max-width:720px}
+.testers-card-actions{
+  display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-top:24px;
+}
+.testers-card-btn{
+  background:var(--brand);
+  color:#fff8f5;
+  font-weight:700;
+  padding:14px 26px;
+  border-radius:14px;
+  text-decoration:none;
+  transition:transform .18s ease;
+}
+.testers-card-btn:hover{transform:translateY(-2px)}
+.testers-card-mail{color:var(--muted);font-size:.92rem}
+
+@media(max-width:900px){
+  .testers-bar{margin:14px 20px 0;flex-direction:column;align-items:flex-start}
+  .testers-bar-btn{align-self:stretch;text-align:center}
+  .testers-card-inner{padding:34px 24px}
+}
+
+@media (prefers-color-scheme: dark){
+  .testers-bar p{color:#f5ece8}
+  .testers-bar-tag{background:#e2ad9b;color:#2a1c18}
+  .testers-bar-btn{background:#f5ece8;color:#2a1c18}
+  .testers-card-eyebrow{color:#e39c84}
+  .testers-card-eyebrow span{background:#e07a5f}
+  .testers-card-inner{background:#211d1b;border-color:#443934}
+}
