@@ -1328,7 +1328,7 @@ footer > div a.footer-external::after{
   .testers-card-inner{background:#211d1b;border-color:#443934}
 }
 
-/* 2026-09-11 — секция с видео (встроенный плеер ВКонтакте) */
+/* 2026-09-11 — секция с видео (свой файл, без сторонних плееров) */
 .video-section{padding-top:192px}
 .video-frame{
   position:relative;
@@ -1342,7 +1342,7 @@ footer > div a.footer-external::after{
 }
 .video-frame::before{content:"";display:block;padding-top:56.25%}
 .video-frame > *{position:absolute;inset:0;width:100%;height:100%}
-.video-frame iframe{border:0;display:block}
+.video-frame video{display:block;object-fit:cover;background:#000}
 .video-note{
   max-width:960px;
   margin:16px auto 0;
