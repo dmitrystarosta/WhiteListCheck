@@ -1329,7 +1329,7 @@ footer > div a.footer-external::after{
 }
 
 /* 2026-09-11 — секция с видео (фасад + ленивый iframe) */
-.video-section{padding-top:0}
+.video-section{padding-top:96px}
 .video-frame{
   position:relative;
   max-width:960px;
