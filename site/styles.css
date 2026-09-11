@@ -1328,7 +1328,7 @@ footer > div a.footer-external::after{
   .testers-card-inner{background:#211d1b;border-color:#443934}
 }
 
-/* 2026-09-11 — секция с видео (фасад + ленивый iframe) */
+/* 2026-09-11 — секция с видео (встроенный плеер ВКонтакте) */
 .video-section{padding-top:192px}
 .video-frame{
   position:relative;
@@ -1343,34 +1343,6 @@ footer > div a.footer-external::after{
 .video-frame::before{content:"";display:block;padding-top:56.25%}
 .video-frame > *{position:absolute;inset:0;width:100%;height:100%}
 .video-frame iframe{border:0;display:block}
-.video-facade{
-  padding:0;border:0;background:none;cursor:pointer;
-  display:block;font:inherit;color:inherit;
-}
-.video-facade img{
-  width:100%;height:100%;object-fit:cover;display:block;
-  transition:transform .5s ease;
-}
-.video-facade:hover img,.video-facade:focus-visible img{transform:scale(1.02)}
-.video-play{
-  position:absolute;
-  left:7%;
-  bottom:12%;
-  display:inline-flex;
-  align-items:center;
-  gap:11px;
-  background:var(--brand);
-  color:#fff8f5;
-  font-weight:700;
-  font-size:1rem;
-  padding:14px 24px 14px 20px;
-  border-radius:16px;
-  box-shadow:0 12px 26px rgba(67,42,35,.28);
-  transition:transform .18s ease;
-}
-.video-facade:hover .video-play,
-.video-facade:focus-visible .video-play{transform:translateY(-2px)}
-.video-facade:focus-visible{outline:3px solid var(--brand);outline-offset:3px}
 .video-note{
   max-width:960px;
   margin:16px auto 0;
@@ -1382,25 +1354,9 @@ footer > div a.footer-external::after{
 @media(max-width:900px){
   .video-section{padding-top:144px}
   .video-frame{border-radius:22px}
-  .video-play{
-    left:50%;
-    bottom:auto;
-    top:50%;
-    transform:translate(-50%,-50%);
-    padding:13px 20px 13px 17px;
-    font-size:.94rem;
-  }
-  .video-facade:hover .video-play,
-  .video-facade:focus-visible .video-play{transform:translate(-50%,-50%)}
   .video-note{font-size:.82rem;padding:0 4px}
 }
 
 @media (prefers-color-scheme: dark){
   .video-frame{background:#211d1b;border-color:#443934;box-shadow:0 22px 48px rgba(0,0,0,.4)}
-  .video-play{background:#f5ece8;color:#2a1c18}
-}
-
-@media (prefers-reduced-motion: reduce){
-  .video-facade img,.video-play{transition:none}
-  .video-facade:hover img{transform:none}
 }

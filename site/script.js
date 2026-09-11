@@ -78,24 +78,3 @@ if (gallery && prevButton && nextButton) {
   updateButtons();
   requestAnimationFrame(updateButtons);
 }
-
-
-// 2026-09-11 — видео подгружается только по клику, чтобы не тянуть
-// сторонние скрипты и не замедлять первую загрузку страницы.
-const videoFacade = document.querySelector('.video-facade');
-
-if (videoFacade) {
-  videoFacade.addEventListener('click', () => {
-    const src = videoFacade.dataset.videoSrc;
-    if (!src) return;
-
-    const iframe = document.createElement('iframe');
-    iframe.src = src.includes('?') ? `${src}&autoplay=1` : `${src}?autoplay=1`;
-    iframe.title = 'Видео о приложении «Белый список?»';
-    iframe.allow = 'autoplay; encrypted-media; fullscreen; picture-in-picture; screen-wake-lock;';
-    iframe.allowFullscreen = true;
-    iframe.setAttribute('frameborder', '0');
-
-    videoFacade.replaceWith(iframe);
-  });
-}
