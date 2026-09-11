@@ -1360,3 +1360,20 @@ footer > div a.footer-external::after{
 @media (prefers-color-scheme: dark){
   .video-frame{background:#211d1b;border-color:#443934;box-shadow:0 22px 48px rgba(0,0,0,.4)}
 }
+
+/* 2026-09-12 — единые расстояния между секциями.
+   Обычные секции дают 96+96=192px. Цветные панели (.privacy, .cta)
+   используют padding как внутреннее поле, поэтому внешний зазор
+   задаётся margin. Блок тестировщиков своих отступов не имеет вовсе.
+   Полоса преимуществ намеренно прижата к первому экрану. */
+.widget-section{padding-top:96px}
+.privacy{margin-top:96px;margin-bottom:96px}
+.cta{margin-top:96px;margin-bottom:96px}
+.testers-card{margin-top:96px;margin-bottom:96px}
+
+@media(max-width:900px){
+  .widget-section{padding-top:72px}
+  .privacy{margin-top:72px;margin-bottom:72px}
+  .cta{margin-top:72px;margin-bottom:72px}
+  .testers-card{margin-top:72px;margin-bottom:72px}
+}
