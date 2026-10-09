@@ -48,5 +48,18 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/widget_info" />
         </receiver>
+
+        <!-- Отдаёт CSV-журнал системному «Поделиться» через content://-URI.
+             exported=false: доступ только по временному разрешению на конкретный
+             файл (FLAG_GRANT_READ_URI_PERMISSION). Пути — в @xml/file_paths. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
     </application>
 </manifest>
