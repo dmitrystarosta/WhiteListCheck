@@ -21,6 +21,7 @@ import android.telephony.TelephonyManager
 import android.text.format.DateFormat
 import android.view.View
 import android.widget.RemoteViews
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.compose.BackHandler
@@ -36,14 +37,17 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.List
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
@@ -73,6 +77,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.FileProvider
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -103,6 +108,25 @@ data class Probe(val name: String, val url: String)
 data class ProbeResult(val probe: Probe, val ok: Boolean, val ms: Long, val note: String, val checking: Boolean = false)
 
 enum class Verdict { NO_INTERNET, WHITELIST, NORMAL, VPN_OR_ABROAD, UNKNOWN }
+
+// Откуда пришла проверка. label — короткое слово для второй строки «Истории»
+// и для колонки «источник» в CSV; экран и выгрузка берут его отсюда, чтобы
+// не расходиться. (Тихая пересинхронизация при возврате в приложение в журнал
+// не пишется — она не самостоятельная проверка, а обновление карточек.)
+enum class CheckSource(val label: String) {
+    MANUAL("вручную"), BACKGROUND("фон"), WIDGET("виджет")
+}
+
+// Одна запись журнала. ts — момент получения результата (epoch, мс);
+// net — тип сети на момент проверки; operator — оператор (только для мобильной,
+// иначе пусто).
+data class LogEntry(
+    val ts: Long,
+    val verdict: Verdict,
+    val net: String,
+    val operator: String,
+    val source: CheckSource
+)
 
 data class ScanState(
     val running: Boolean = false,
@@ -189,6 +213,66 @@ object ProbeStore {
 
     fun isCustom(ctx: Context): Boolean =
         ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).contains(KEY)
+}
+
+// ---------- Журнал проверок (лог) ----------
+
+// Хранит итог каждой проверки локально в том же SharedPreferences ("netstatus"),
+// отдельным ключом. Формат — JSON-массив, новые записи в конце (при чтении
+// переворачиваем — новые сверху). Храним RETENTION_DAYS суток, старое вытесняем
+// при каждой записи. Объём невелик: ~100 проверок в сутки × 30 дней — доли
+// мегабайта. Отправляется журнал только вручную (кнопкой «Поделиться»).
+object CheckLog {
+    private const val PREFS = "netstatus"
+    private const val KEY = "check_log"
+    const val RETENTION_DAYS = 30L
+    private const val RETENTION_MS = RETENTION_DAYS * 24L * 60L * 60L * 1000L
+
+    // Добавляет запись и подчищает всё старше RETENTION_DAYS.
+    // @Synchronized: фоновый воркёр и виджет-воркёр могут записать одновременно,
+    // а read-modify-write массива не атомарен — сериализуем в пределах процесса.
+    // Вызов делает блокирующий разбор/сборку JSON — НЕ вызывать из UI-потока
+    // (в runScan обёрнуто в Dispatchers.IO; воркёры и так не на Main).
+    @Synchronized
+    fun append(ctx: Context, e: LogEntry) {
+        val prefs = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val arr = try { JSONArray(prefs.getString(KEY, "[]")) } catch (_: Exception) { JSONArray() }
+        arr.put(
+            JSONObject()
+                .put("t", e.ts)
+                .put("v", e.verdict.name)
+                .put("n", e.net)
+                .put("o", e.operator)
+                .put("s", e.source.name)
+        )
+        val cutoff = System.currentTimeMillis() - RETENTION_MS
+        val kept = JSONArray()
+        for (i in 0 until arr.length()) {
+            val o = arr.optJSONObject(i) ?: continue
+            if (o.optLong("t", 0L) >= cutoff) kept.put(o)
+        }
+        prefs.edit().putString(KEY, kept.toString()).apply()
+    }
+
+    // Все записи, новые сверху. Битые записи пропускаем, а не роняем журнал.
+    fun load(ctx: Context): List<LogEntry> {
+        val prefs = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val arr = try { JSONArray(prefs.getString(KEY, "[]")) } catch (_: Exception) { JSONArray() }
+        val out = ArrayList<LogEntry>(arr.length())
+        for (i in 0 until arr.length()) {
+            val o = arr.optJSONObject(i) ?: continue
+            val v = runCatching { Verdict.valueOf(o.getString("v")) }.getOrNull() ?: continue
+            val s = runCatching { CheckSource.valueOf(o.getString("s")) }.getOrNull()
+                ?: CheckSource.BACKGROUND
+            out.add(LogEntry(o.optLong("t"), v, o.optString("n"), o.optString("o"), s))
+        }
+        out.reverse()
+        return out
+    }
+
+    fun clear(ctx: Context) {
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().remove(KEY).apply()
+    }
 }
 
 // Превращает введённый пользователем домен в пробу.
@@ -446,12 +530,15 @@ class WidgetScanWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker
     override suspend fun doWork(): Result {
         val ctx = applicationContext
         val prefs = ctx.getSharedPreferences("netstatus", Context.MODE_PRIVATE)
+        val net = Scanner.networkType(ctx)
 
-        if (Scanner.networkType(ctx) == "нет сети") {
+        if (net == "нет сети") {
+            val now = System.currentTimeMillis()
             prefs.edit()
                 .putString("last_verdict", Verdict.NO_INTERNET.name)
-                .putLong("last_check_ts", System.currentTimeMillis())
+                .putLong("last_check_ts", now)
                 .apply()
+            CheckLog.append(ctx, LogEntry(now, Verdict.NO_INTERNET, net, "", CheckSource.WIDGET))
             StatusWidgetUpdater.update(ctx)
             return Result.success()
         }
@@ -461,11 +548,14 @@ class WidgetScanWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker
         val b = Scanner.scanGroup(lb)
         val c = Scanner.scanGroup(lc)
         val verdict = Scanner.verdict(a, b, c)
+        val operator = if (net == "мобильный интернет") Scanner.operatorName(ctx) else ""
+        val now = System.currentTimeMillis()
 
         prefs.edit()
             .putString("last_verdict", verdict.name)
-            .putLong("last_check_ts", System.currentTimeMillis())
+            .putLong("last_check_ts", now)
             .apply()
+        CheckLog.append(ctx, LogEntry(now, verdict, net, operator, CheckSource.WIDGET))
         StatusWidgetUpdater.update(ctx)
         return Result.success()
     }
@@ -474,7 +564,18 @@ class WidgetScanWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker
 class CheckWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, params) {
     override suspend fun doWork(): Result {
         val ctx = applicationContext
-        if (Scanner.networkType(ctx) == "нет сети") return Result.success()
+        val net = Scanner.networkType(ctx)
+        if (net == "нет сети") {
+            // Офлайн: вердикт/виджет/уведомление НЕ трогаем (как и раньше — чтобы
+            // не плодить ложные «нет сети» на пересменке радио при плановом
+            // пробуждении), но сам факт проверки пишем в журнал. По нему видно,
+            // что воркёр отработал, — в отличие от «дырки», когда его убила система.
+            CheckLog.append(
+                ctx,
+                LogEntry(System.currentTimeMillis(), Verdict.NO_INTERNET, net, "", CheckSource.BACKGROUND)
+            )
+            return Result.success()
+        }
         // Фоновая проверка использует те же списки, что и ручная,
         // включая пользовательские правки.
         val (la, lb, lc) = ProbeStore.load(ctx)
@@ -482,6 +583,8 @@ class CheckWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx,
         val b = Scanner.scanGroup(lb)
         val c = Scanner.scanGroup(lc)
         val verdict = Scanner.verdict(a, b, c)
+        val operator = if (net == "мобильный интернет") Scanner.operatorName(ctx) else ""
+        val now = System.currentTimeMillis()
 
         val prefs = ctx.getSharedPreferences("netstatus", Context.MODE_PRIVATE)
         val prev = prefs.getString("last_verdict", null)
@@ -490,8 +593,9 @@ class CheckWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx,
         }
         prefs.edit()
             .putString("last_verdict", verdict.name)
-            .putLong("last_check_ts", System.currentTimeMillis())
+            .putLong("last_check_ts", now)
             .apply()
+        CheckLog.append(ctx, LogEntry(now, verdict, net, operator, CheckSource.BACKGROUND))
         StatusWidgetUpdater.update(ctx)
         return Result.success()
     }
@@ -749,6 +853,8 @@ fun App() {
     // Экран «Как остаться на связи?» — переоткрывается из подвала (та же
     // инструкция, что и второй шаг онбординга).
     var showHelp by remember { mutableStateOf(false) }
+    // Экран «История» — журнал проверок; открывается кружком-входом с главной.
+    var showHistory by remember { mutableStateOf(false) }
     // Онбординг — только на по-настоящему первой установке и только один раз.
     // Показываем, пока не выставлен флаг onboarded. Флаг живёт в SharedPreferences,
     // а прежняя проверка «свежести» по времени установки (firstInstallTime ==
@@ -795,11 +901,13 @@ fun App() {
             )
             showSettings -> SettingsScreen(onBack = { showSettings = false })
             showHelp -> ConnectivityHelpScreen(onDone = { showHelp = false }, showBack = true)
+            showHistory -> HistoryScreen(onBack = { showHistory = false })
             else -> MainScreen(
                 scanState = scanState,
                 scope = appScope,
                 onOpenSettings = { showSettings = true },
-                onOpenHelp = { showHelp = true }
+                onOpenHelp = { showHelp = true },
+                onOpenHistory = { showHistory = true }
             )
         }
       }
@@ -811,7 +919,8 @@ fun MainScreen(
     scanState: MutableState<ScanState>,
     scope: CoroutineScope,
     onOpenSettings: () -> Unit,
-    onOpenHelp: () -> Unit
+    onOpenHelp: () -> Unit,
+    onOpenHistory: () -> Unit
 ) {
     val context = LocalContext.current
     var state by scanState
@@ -883,6 +992,12 @@ fun MainScreen(
                     }
                     editor.apply()
                     StatusWidgetUpdater.update(context)
+                    // Журнал — только на пользовательскую проверку (та же граница,
+                    // что и у счётчика «Отзывы»): тихую пересинхронизацию не пишем.
+                    if (countsForReview) {
+                        val entry = LogEntry(now, Verdict.NO_INTERNET, net, "", CheckSource.MANUAL)
+                        withContext(Dispatchers.IO) { CheckLog.append(context, entry) }
+                    }
                     state = ScanState(
                         running = false,
                         networkType = net,
@@ -975,6 +1090,12 @@ fun MainScreen(
                 }
                 editor.apply()
                 StatusWidgetUpdater.update(context)
+
+                // Журнал — только на пользовательскую проверку (см. выше).
+                if (countsForReview) {
+                    val entry = LogEntry(now, verdict, net, operator, CheckSource.MANUAL)
+                    withContext(Dispatchers.IO) { CheckLog.append(context, entry) }
+                }
 
                 state = state.copy(
                     running = false,
@@ -1070,7 +1191,11 @@ fun MainScreen(
                         Box(Modifier.weight(1f).align(Alignment.CenterVertically)) {
                             NetworkChip(state.networkType, state.operator, netExpanded) { netExpanded = !netExpanded }
                         }
+                        // Вход в «Историю» — всегда, когда виден этот ряд; «Поделиться
+                        // вердиктом» — только когда есть что шарить (вердикт получен).
+                        HistoryButton(onOpenHistory)
                         if (state.verdict != null) {
+                            Spacer(Modifier.width(8.dp))
                             ShareVerdictButton(state)
                         }
                     }
@@ -1276,6 +1401,290 @@ fun ShareVerdictButton(state: ScanState) {
             // справа два узла, слева один, без сдвига он кажется смещённым вправо.
             modifier = Modifier.size(16.dp).offset(x = (-1).dp)
         )
+    }
+}
+
+// ---------- Экран «История» (журнал проверок) ----------
+
+// Короткая подпись вердикта — одна и та же для строки лога и для колонки CSV,
+// чтобы экран и выгрузка не расходились.
+fun verdictLabel(v: Verdict): String = when (v) {
+    Verdict.NORMAL -> "Всё в норме"
+    Verdict.WHITELIST -> "Белый список"
+    Verdict.NO_INTERNET -> "Нет интернета"
+    Verdict.VPN_OR_ABROAD -> "VPN / вне РФ"
+    Verdict.UNKNOWN -> "Непонятно"
+}
+
+// Вторая строка: «сеть · оператор · источник». «мобильный интернет» сокращаем
+// до «мобильный» — только для показа; в CSV уходит полный вид сети.
+private fun logContextLine(e: LogEntry): String {
+    val net = if (e.net == "мобильный интернет") "мобильный" else e.net
+    val parts = ArrayList<String>(3)
+    parts.add(net)
+    if (e.operator.isNotBlank()) parts.add(e.operator)
+    parts.add(e.source.label)
+    return parts.joinToString(" · ")
+}
+
+// «30.09» — и подпись даты в разделителе, и ключ дня для группировки (без года:
+// в пределах 30 дней число+месяц однозначны).
+private fun logDay(ts: Long): String =
+    java.text.SimpleDateFormat("dd.MM", java.util.Locale("ru")).format(java.util.Date(ts))
+
+// Экранирование ячейки CSV: если внутри разделитель/кавычка/перенос — в кавычки.
+private fun csvCell(s: String): String =
+    if (s.any { it == ';' || it == '"' || it == '\n' || it == '\r' })
+        "\"" + s.replace("\"", "\"\"") + "\"" else s
+
+// Выгрузка журнала в CSV и системное «Поделиться». Разделитель «;» и BOM UTF-8 —
+// чтобы русский Excel не ломал кириллицу и сам разложил по столбцам. Даты полные,
+// с годом. Файл кладём в cache/export и отдаём через FileProvider.
+fun shareLogCsv(context: Context) {
+    val entries = CheckLog.load(context) // новые сверху
+    if (entries.isEmpty()) {
+        Toast.makeText(context, "Журнал пуст", Toast.LENGTH_SHORT).show()
+        return
+    }
+    val fmtDate = java.text.SimpleDateFormat("dd.MM.yyyy", java.util.Locale("ru"))
+    val fmtTime = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale("ru"))
+    val sb = StringBuilder()
+    sb.append('\uFEFF') // BOM
+    sb.append("Дата;Время;Вердикт;Сеть;Оператор;Источник\r\n")
+    for (e in entries) {
+        val d = java.util.Date(e.ts)
+        sb.append(fmtDate.format(d)).append(';')
+            .append(fmtTime.format(d)).append(';')
+            .append(csvCell(verdictLabel(e.verdict))).append(';')
+            .append(csvCell(e.net)).append(';')
+            .append(csvCell(e.operator)).append(';')
+            .append(csvCell(e.source.label)).append("\r\n")
+    }
+    try {
+        val dir = java.io.File(context.cacheDir, "export").apply { mkdirs() }
+        val file = java.io.File(dir, "belyj-spisok-log.csv")
+        file.writeText(sb.toString(), Charsets.UTF_8)
+        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/csv"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(Intent.createChooser(intent, "Поделиться журналом"))
+    } catch (_: Exception) {
+        Toast.makeText(context, "Не удалось подготовить файл", Toast.LENGTH_SHORT).show()
+    }
+}
+
+// Круглая кнопка-вход в «Историю» — рядом с «Поделиться», в том же стиле.
+@Composable
+fun HistoryButton(onOpen: () -> Unit) {
+    Box(
+        Modifier
+            .tvFocusHighlight(CircleShape)
+            .size(32.dp)
+            .clip(CircleShape)
+            .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), CircleShape)
+            .clickable { onOpen() },
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            Icons.AutoMirrored.Outlined.List,
+            contentDescription = "История проверок",
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(16.dp)
+        )
+    }
+}
+
+@Composable
+fun HistoryScreen(onBack: () -> Unit) {
+    val context = LocalContext.current
+    // reloadKey дёргаем после «Очистить», чтобы перечитать журнал.
+    var reloadKey by remember { mutableStateOf(0) }
+    // Чтение журнала (разбор JSON) уводим с главного потока — на большом логе
+    // парсинг заметен; пока грузится, показываем индикатор.
+    val entries by produceState<List<LogEntry>?>(initialValue = null, reloadKey) {
+        value = withContext(Dispatchers.IO) { CheckLog.load(context) }
+    }
+    var showClearConfirm by remember { mutableStateOf(false) }
+    var showAllEarlier by rememberSaveable { mutableStateOf(false) }
+
+    BackHandler { onBack() }
+
+    Column(Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
+        Spacer(Modifier.height(10.dp))
+        // Шапка: назад + «История», справа — Поделиться и Очистить (закреплены
+        // сверху: до низа длинного лога не долистать).
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(
+                onClick = onBack,
+                modifier = Modifier.offset(x = (-12).dp).tvFocusHighlight(CircleShape)
+            ) {
+                Icon(
+                    Icons.Filled.ArrowBack,
+                    contentDescription = "Назад",
+                    tint = MaterialTheme.colorScheme.onBackground
+                )
+            }
+            Text(
+                "История",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            Spacer(Modifier.weight(1f))
+            if (!entries.isNullOrEmpty()) {
+                IconButton(
+                    onClick = { shareLogCsv(context) },
+                    modifier = Modifier.tvFocusHighlight(CircleShape)
+                ) {
+                    Icon(
+                        Icons.Outlined.Share,
+                        contentDescription = "Поделиться журналом (CSV)",
+                        tint = MaterialTheme.colorScheme.onBackground
+                    )
+                }
+                IconButton(
+                    onClick = { showClearConfirm = true },
+                    modifier = Modifier.tvFocusHighlight(CircleShape)
+                ) {
+                    Icon(
+                        Icons.Filled.Delete,
+                        contentDescription = "Очистить журнал",
+                        tint = MaterialTheme.colorScheme.onBackground
+                    )
+                }
+            }
+        }
+
+        val list = entries
+        when {
+            list == null -> {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                }
+            }
+            list.isEmpty() -> {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(
+                        "Журнал пуст.\nЗдесь будут появляться результаты проверок —\nручных, фоновых и по тапу на виджет.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        lineHeight = 22.sp
+                    )
+                }
+            }
+            else -> {
+                // По умолчанию — последние 7 дней; остальное из 30-дневного
+                // хранилища прячем за «Показать более ранние».
+                val weekCutoff = System.currentTimeMillis() - 7L * 24 * 60 * 60 * 1000
+                val earlierCount = list.count { it.ts < weekCutoff }
+                val visible = if (showAllEarlier) list else list.filter { it.ts >= weekCutoff }
+                LazyColumn(Modifier.weight(1f)) {
+                    itemsIndexed(visible) { i, e ->
+                        val day = logDay(e.ts)
+                        val prevDay = if (i == 0) null else logDay(visible[i - 1].ts)
+                        if (day != prevDay) DayDivider(day)
+                        LogRow(e)
+                    }
+                    if (!showAllEarlier && earlierCount > 0) {
+                        item {
+                            TextButton(
+                                onClick = { showAllEarlier = true },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp)
+                                    .tvFocusHighlight(RoundedCornerShape(12.dp))
+                            ) { Text("Показать более ранние ($earlierCount)") }
+                        }
+                    }
+                }
+                Text(
+                    "Журнал хранится только на устройстве",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 16.dp)
+                )
+            }
+        }
+    }
+
+    if (showClearConfirm) {
+        AlertDialog(
+            onDismissRequest = { showClearConfirm = false },
+            title = { Text("Очистить журнал?") },
+            text = { Text("Все записи журнала будут удалены без возможности восстановления.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    CheckLog.clear(context)
+                    showAllEarlier = false
+                    showClearConfirm = false
+                    reloadKey++
+                }) { Text("Очистить") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearConfirm = false }) { Text("Отмена") }
+            }
+        )
+    }
+}
+
+// Разделитель дня: монохромная марка по центру ЭКРАНА, дата — по центру левой
+// половины. Дата компактная («30.09»), поэтому не обрежется на узких экранах.
+@Composable
+fun DayDivider(dateText: String) {
+    Box(Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 6.dp)) {
+        Row(Modifier.fillMaxWidth()) {
+            Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                Text(
+                    dateText,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1
+                )
+            }
+            Spacer(Modifier.weight(1f))
+        }
+        AppLogoMark(Modifier.align(Alignment.Center).size(22.dp))
+    }
+}
+
+// Одна строка журнала: цветной маркер + вердикт (цвет по вердикту) и время
+// справа; ниже — «сеть · оператор · источник» мелким приглушённым шрифтом.
+@Composable
+fun LogRow(e: LogEntry) {
+    val color = verdictColors(e.verdict).content
+    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.Top) {
+        Box(
+            Modifier
+                .padding(top = 7.dp, end = 10.dp)
+                .size(8.dp)
+                .background(color, CircleShape)
+        )
+        Column(Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    verdictLabel(e.verdict),
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = color,
+                    modifier = Modifier.weight(1f)
+                )
+                Text(
+                    DateFormat.format("H:mm", e.ts).toString(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Text(
+                logContextLine(e),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 
