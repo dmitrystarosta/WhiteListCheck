@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- CSV-журнал готовится во внутреннем кэше (cacheDir/export) и отдаётся
+         «Поделиться». Другие пути не публикуем — только эта папка. -->
+    <cache-path name="export" path="export/" />
+</paths>
