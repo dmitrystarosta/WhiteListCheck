@@ -1501,7 +1501,13 @@ fun shareLogCsv(context: Context) {
     }
     try {
         val dir = java.io.File(context.cacheDir, "export").apply { mkdirs() }
-        val file = java.io.File(dir, "belyj-spisok-log.csv")
+        // Старые выгрузки в кэше чистим, чтобы не копились.
+        dir.listFiles()?.forEach { it.delete() }
+        // Дата и время выгрузки в имени — чтобы файл было удобно отличать визуально
+        // (формат ДД-ММ-ГГГГ_ЧЧ-ММ, без двоеточий — они недопустимы в именах файлов).
+        val stamp = java.text.SimpleDateFormat("dd-MM-yyyy_HH-mm", java.util.Locale("ru"))
+            .format(java.util.Date())
+        val file = java.io.File(dir, "belyj-spisok-log_$stamp.csv")
         file.writeText(sb.toString(), Charsets.UTF_8)
         val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
         val intent = Intent(Intent.ACTION_SEND).apply {
