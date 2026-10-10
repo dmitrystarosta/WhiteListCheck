@@ -1,14 +1,17 @@
 <!-- Официальный логотип Google Play (конвертирован из SVG).
-     Белая подложка-фон из исходника убрана — фон прозрачный, чтобы иконка
-     ровно ложилась на карточку и в тёмной теме. Многоцветный, поэтому
-     используется как Image без тонировки. -->
+     Белая подложка убрана; холст обрезан до самого треугольника и смещён группой
+     в квадрат 20×20, чтобы высота логотипа заполняла бокс целиком и была вровень
+     с RuStore/GitHub (исходный треугольник занимал лишь центр холста 32×32).
+     Многоцветный — используется как Image без тонировки. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="24dp"
-    android:height="24dp"
-    android:viewportWidth="32"
-    android:viewportHeight="32">
-    <path android:fillColor="#EA4335" android:pathData="m16.402 15.553-8.39 8.79a2.276 2.276 0 0 0 3.333 1.35l9.44-5.377z" />
-    <path android:fillColor="#FBBC04" android:pathData="m24.886 14.058-4.083-2.338-4.595 4.033 4.614 4.55 4.051-2.312a2.22 2.22 0 0 0 0-3.933z" />
-    <path android:fillColor="#4285F4" android:pathData="M8.013 7.663q-.076.282-.075.575v15.53q0 .291.075.574l8.677-8.564z" />
-    <path android:fillColor="#34A853" android:pathData="m16.465 16.003 4.338-4.283-9.427-5.401A2.3 2.3 0 0 0 10.206 6a2.276 2.276 0 0 0-2.193 1.657z" />
+    android:width="20dp"
+    android:height="20dp"
+    android:viewportWidth="20"
+    android:viewportHeight="20">
+    <group android:translateX="-7" android:translateY="-6">
+        <path android:fillColor="#EA4335" android:pathData="m16.402 15.553-8.39 8.79a2.276 2.276 0 0 0 3.333 1.35l9.44-5.377z" />
+        <path android:fillColor="#FBBC04" android:pathData="m24.886 14.058-4.083-2.338-4.595 4.033 4.614 4.55 4.051-2.312a2.22 2.22 0 0 0 0-3.933z" />
+        <path android:fillColor="#4285F4" android:pathData="M8.013 7.663q-.076.282-.075.575v15.53q0 .291.075.574l8.677-8.564z" />
+        <path android:fillColor="#34A853" android:pathData="m16.465 16.003 4.338-4.283-9.427-5.401A2.3 2.3 0 0 0 10.206 6a2.276 2.276 0 0 0-2.193 1.657z" />
+    </group>
 </vector>
