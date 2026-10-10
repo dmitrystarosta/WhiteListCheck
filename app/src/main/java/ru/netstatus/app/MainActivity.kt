@@ -99,6 +99,7 @@ import java.util.concurrent.TimeUnit
 
 const val REPO_RELEASES = "https://github.com/dmitrystarosta/WhiteListCheck/releases"
 const val RUSTORE_URL = "https://www.rustore.ru/catalog/app/ru.netstatus.app"
+const val PLAY_URL = "https://play.google.com/store/apps/details?id=ru.netstatus.app"
 const val SITE_URL = "https://belyjspisok.ru/"
 const val REPO_URL = "https://github.com/dmitrystarosta/WhiteListCheck"
 
@@ -537,6 +538,8 @@ class WidgetScanWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker
             prefs.edit()
                 .putString("last_verdict", Verdict.NO_INTERNET.name)
                 .putLong("last_check_ts", now)
+                .putString("last_net", net)
+                .putString("last_operator", "")
                 .apply()
             CheckLog.append(ctx, LogEntry(now, Verdict.NO_INTERNET, net, "", CheckSource.WIDGET))
             StatusWidgetUpdater.update(ctx)
@@ -554,6 +557,8 @@ class WidgetScanWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker
         prefs.edit()
             .putString("last_verdict", verdict.name)
             .putLong("last_check_ts", now)
+            .putString("last_net", net)
+            .putString("last_operator", operator)
             .apply()
         CheckLog.append(ctx, LogEntry(now, verdict, net, operator, CheckSource.WIDGET))
         StatusWidgetUpdater.update(ctx)
@@ -594,6 +599,8 @@ class CheckWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx,
         prefs.edit()
             .putString("last_verdict", verdict.name)
             .putLong("last_check_ts", now)
+            .putString("last_net", net)
+            .putString("last_operator", operator)
             .apply()
         CheckLog.append(ctx, LogEntry(now, verdict, net, operator, CheckSource.BACKGROUND))
         StatusWidgetUpdater.update(ctx)
@@ -986,6 +993,8 @@ fun MainScreen(
                     val editor = prefs.edit()
                         .putString("last_verdict", Verdict.NO_INTERNET.name)
                         .putLong("last_check_ts", now)
+                        .putString("last_net", net)
+                        .putString("last_operator", "")
                     // Счётчик для блока «Отзывы» — только на пользовательские проверки.
                     if (countsForReview) {
                         editor.putInt("scan_count", prefs.getInt("scan_count", 0) + 1)
@@ -1084,6 +1093,10 @@ fun MainScreen(
                 val editor = prefs.edit()
                     .putString("last_verdict", verdict.name)
                     .putLong("last_check_ts", now)
+                    // Сеть и оператор — чтобы на холодном старте восстановить чип
+                    // вместе с вердиктом (см. восстановление в MainScreen).
+                    .putString("last_net", net)
+                    .putString("last_operator", operator)
                 // Счётчик для блока «Отзывы» — только на пользовательские проверки.
                 if (countsForReview) {
                     editor.putInt("scan_count", prefs.getInt("scan_count", 0) + 1)
@@ -1107,6 +1120,33 @@ fun MainScreen(
                 // флаг «идёт проверка» снимается — экран не может навсегда
                 // зависнуть в «Сканирую…».
                 if (state.running) state = state.copy(running = false)
+            }
+        }
+    }
+
+    // Холодный старт: процесс был убит системой (частое на MIUI/старых прошивках),
+    // состояние пустое. Подтягиваем последний результат из хранилища, чтобы главный
+    // экран не открывался пустым и сразу был виден вход в «Историю». Детали по сайтам
+    // не храним — карточки групп просто не показываются до следующей проверки, а
+    // карточка вердикта и чип сети восстанавливаются. Сеть берём сохранённую; если её
+    // нет (журнал от прошлой версии), читаем текущую — иначе не покажется ряд с чипом.
+    LaunchedEffect(Unit) {
+        if (state.verdict == null && !state.running) {
+            val v = prefs.getString("last_verdict", null)
+                ?.let { runCatching { Verdict.valueOf(it) }.getOrNull() }
+            if (v != null) {
+                var net = prefs.getString("last_net", "") ?: ""
+                var op = prefs.getString("last_operator", "") ?: ""
+                if (net.isEmpty()) {
+                    net = Scanner.networkType(context)
+                    op = if (net == "мобильный интернет") Scanner.operatorName(context) else ""
+                }
+                state = state.copy(
+                    verdict = v,
+                    networkType = net,
+                    operator = op,
+                    checkedAt = prefs.getLong("last_check_ts", 0L)
+                )
             }
         }
     }
@@ -1427,10 +1467,9 @@ private fun logContextLine(e: LogEntry): String {
     return parts.joinToString(" · ")
 }
 
-// «30.09» — и подпись даты в разделителе, и ключ дня для группировки (без года:
-// в пределах 30 дней число+месяц однозначны).
+// «10.10.2026» — и подпись даты в разделителе, и ключ дня для группировки.
 private fun logDay(ts: Long): String =
-    java.text.SimpleDateFormat("dd.MM", java.util.Locale("ru")).format(java.util.Date(ts))
+    java.text.SimpleDateFormat("dd.MM.yyyy", java.util.Locale("ru")).format(java.util.Date(ts))
 
 // Экранирование ячейки CSV: если внутри разделитель/кавычка/перенос — в кавычки.
 private fun csvCell(s: String): String =
@@ -1632,23 +1671,23 @@ fun HistoryScreen(onBack: () -> Unit) {
     }
 }
 
-// Разделитель дня: монохромная марка по центру ЭКРАНА, дата — по центру левой
-// половины. Дата компактная («30.09»), поэтому не обрежется на узких экранах.
+// Разделитель дня: монохромная марка и дата справа от неё — единым блоком по
+// центру страницы, выровнены по вертикали. Сбалансированно и не обрезается.
 @Composable
 fun DayDivider(dateText: String) {
-    Box(Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 6.dp)) {
-        Row(Modifier.fillMaxWidth()) {
-            Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                Text(
-                    dateText,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1
-                )
-            }
-            Spacer(Modifier.weight(1f))
-        }
-        AppLogoMark(Modifier.align(Alignment.Center).size(22.dp))
+    Row(
+        Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 6.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        AppLogoMark(Modifier.size(20.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(
+            dateText,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1
+        )
     }
 }
 
@@ -2259,6 +2298,7 @@ fun ReviewCard(onEngaged: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(Modifier.height(12.dp))
+            // Верхний ряд: RuStore слева, Google Play справа.
             Row {
                 OutlinedButton(
                     onClick = { onEngaged(); uriHandler.openUri(RUSTORE_URL) },
@@ -2276,20 +2316,37 @@ fun ReviewCard(onEngaged: () -> Unit) {
                 }
                 Spacer(Modifier.width(10.dp))
                 OutlinedButton(
-                    onClick = { onEngaged(); uriHandler.openUri(REPO_URL) },
+                    onClick = { onEngaged(); uriHandler.openUri(PLAY_URL) },
                     shape = RoundedCornerShape(12.dp),
                     contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
                     modifier = Modifier.weight(1f).tvFocusHighlight(RoundedCornerShape(12.dp))
                 ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_github),
+                    // Google Play — многоцветный логотип, НЕ тонируем (как RuStore).
+                    Image(
+                        painter = painterResource(R.drawable.ic_googleplay),
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(Modifier.width(8.dp))
-                    Text("GitHub")
+                    Text("Google Play")
                 }
+            }
+            Spacer(Modifier.height(10.dp))
+            // Ниже — GitHub на всю ширину.
+            OutlinedButton(
+                onClick = { onEngaged(); uriHandler.openUri(REPO_URL) },
+                shape = RoundedCornerShape(12.dp),
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
+                modifier = Modifier.fillMaxWidth().tvFocusHighlight(RoundedCornerShape(12.dp))
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_github),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text("GitHub")
             }
         }
     }
