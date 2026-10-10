@@ -1,0 +1,16 @@
+<!-- Логотип Google Play: четырёхцветный «треугольник воспроизведения».
+     Многоцветный, поэтому используется как Image без тонировки. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="512"
+    android:viewportHeight="512">
+    <!-- верх-слева -->
+    <path android:fillColor="#00C3FF" android:pathData="M74,52 L74,256 L262,256 Z" />
+    <!-- низ-слева -->
+    <path android:fillColor="#00DE76" android:pathData="M74,256 L74,460 L262,256 Z" />
+    <!-- верх-справа -->
+    <path android:fillColor="#FF3D47" android:pathData="M74,52 L262,256 L446,256 Z" />
+    <!-- низ-справа -->
+    <path android:fillColor="#FFCE00" android:pathData="M262,256 L74,460 L446,256 Z" />
+</vector>
