@@ -1676,16 +1676,17 @@ fun HistoryScreen(onBack: () -> Unit) {
 @Composable
 fun DayDivider(dateText: String) {
     Row(
-        Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 6.dp),
+        Modifier.fillMaxWidth().padding(top = 20.dp, bottom = 10.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        AppLogoMark(Modifier.size(20.dp))
-        Spacer(Modifier.width(8.dp))
+        AppLogoMark(Modifier.size(26.dp))
+        Spacer(Modifier.width(10.dp))
         Text(
             dateText,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground,
             maxLines = 1
         )
     }
