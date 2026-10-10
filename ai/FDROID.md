@@ -2,11 +2,11 @@
 
 История и правила публикации «Белый список?» (ru.netstatus.app) в F-Droid.
 Отдельный документ, потому что процесс F-Droid сильно отличается от RuStore/GitHub.
-Последнее обновление: 05.09.2026.
+Последнее обновление: 10.10.2026 (рецепт синхронизирован под v0.6.0).
 
 **Статус: практически готово** — воспроизводимая сборка сошлась, MR стоит
-в очереди на ревью/мёрж. 05.09.2026 рецепт обновлён с 0.5.4 на 0.5.5.
-Дальше — ожидание.
+в очереди на ревью/мёрж. 10.10.2026 рецепт обновлён с 0.5.5 на 0.6.0
+(`commit:` запинен на полный хэш). Метка `waiting-for-upstream`; ждём linsui.
 
 ---
 
@@ -19,10 +19,13 @@
 - **Файл метаданных:** `metadata/ru.netstatus.app.yml` (в форке, ветка `ru.netstatus.app`)
 - **Отпечаток сертификата подписи (публичный, не секрет):**
   `5844d644b893d299a59cf2ccdc97937eddcadcb635c4afebd8d2b3c0f7e90933`
-- **Ключевой коммит сборки (актуальный):** тег `v0.5.5` = `8c38195` —
-  из него собран публичный `WhiteListCheck_v0.5.5.apk` И его же собирает
-  F-Droid ⇒ сборка воспроизводима, приложение пойдёт **с подписью автора**.
-  (Предыдущий рецепт указывал `3db0b191…` для 0.5.4.)
+- **Ключевой коммит сборки (актуальный):** тег `v0.6.0` =
+  `b159c5d876f5ea7beb874a770af34e1ff1d347c1` — из него собран публичный
+  `WhiteListCheck_v0.6.0.apk` И его же собирает F-Droid ⇒ сборка
+  воспроизводима, приложение пойдёт **с подписью автора**. В `commit:`
+  на этот раз указан ПОЛНЫЙ ХЭШ (не имя тега), чтобы мейнтейнеру не пришлось
+  «прибивать» его при ревью, как было с 0.5.5.
+  (Предыдущие рецепты: `8c38195` для 0.5.5, `3db0b191…` для 0.5.4.)
 - **Участники MR:** `linsui` — мейнтейнер F-Droid (ведёт MR, запускает
   настоящие пайплайны); `duckniii/seeker` — репортёр заявки RFP (советы).
 
@@ -69,8 +72,15 @@
    later. If everything works well we'll merge it» и предупредил, что очередь
    длинная.
 
-## Текущее состояние (05.09.2026)
+## Текущее состояние (10.10.2026)
 
+- 🔄 **10.10.2026 рецепт синхронизирован с v0.6.0**: блок `Builds` →
+  `versionName: 0.6.0 / versionCode: 18 / commit:` полный хэш
+  `b159c5d876f5ea7beb874a770af34e1ff1d347c1`, `CurrentVersion: 0.6.0`,
+  `CurrentVersionCode: 18`. Блок 0.5.5 заменён (на F-Droid ещё ничего
+  не опубликовано — копить незачем). Changelog'и `18.txt` (ru+en) лежат
+  в теге `v0.6.0`. Залито через «Replace», оставлен комментарий в MR.
+  Метка `waiting-for-upstream`; ждём linsui (не пинговать).
 - ✅ Все настоящие джобы F-Droid были зелёные на 0.5.4 (`fdroid build`,
   `rewritemeta`, `schema validation`, `checkupdates`, `lint`).
 - 🔄 **05.09.2026 рецепт синхронизирован с v0.5.5** (по правилу linsui,
@@ -158,9 +168,9 @@ Binaries:
   https://github.com/dmitrystarosta/WhiteListCheck/releases/download/v%v/WhiteListCheck_v%v.apk
 
 Builds:
-  - versionName: 0.5.5
-    versionCode: 17
-    commit: v0.5.5
+  - versionName: 0.6.0
+    versionCode: 18
+    commit: b159c5d876f5ea7beb874a770af34e1ff1d347c1
     subdir: app
     gradle:
       - yes
@@ -169,6 +179,6 @@ AllowedAPKSigningKeys: 5844d644b893d299a59cf2ccdc97937eddcadcb635c4afebd8d2b3c0f
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
-CurrentVersion: 0.5.5
-CurrentVersionCode: 17
+CurrentVersion: 0.6.0
+CurrentVersionCode: 18
 ```

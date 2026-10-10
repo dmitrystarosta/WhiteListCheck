@@ -276,6 +276,9 @@ push в main (плюс ручной запуск workflow_dispatch). Готов�
 - Release-ключ: локально у владельца C:\AndroidKeys\whitelistcheck-release.jks,
   алиас whitelistcheck, RSA 4096, validity 10000 дней; копия файла и пароль —
   в облаке владельца. Пароль ключа = паролю хранилища.
+  Один и тот же ключ служит upload-ключом И app signing key в Google Play
+  (там он показан как SHA-256 `5844d6…` и SHA-1 `FB:7B:97…`), и значится
+  в `AllowedAPKSigningKeys` F-Droid. То есть подпись действительно единая.
 - В CI ключ восстанавливается из секрета KEYSTORE_BASE64.
 - История: первый ключ скомпрометирован (keystore.properties с паролями
   закоммичен в публичный репозиторий) и заменён 06.07.2026. Правило:

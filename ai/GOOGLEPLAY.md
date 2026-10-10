@@ -3,11 +3,13 @@
 Публикация «Белого списка?» в Google Play. Файл-двойник ai/FDROID.md:
 история, правила, грабли. Обновлять после каждого шага.
 
-Последнее обновление: 05.10.2026 — **приложение опубликовано в production**
-(v0.5.5 / versionCode 17, раскатка 100%, 178 стран) **с 26.09.2026**.
-**Android TV подключён 03.10.2026** как форм-фактор на том же AAB (в треке
-также Chrome OS), отдельная сборка не потребовалась. Закрытое тестирование
-(трек alpha с 08.09.2026, 12 тестировщиков × 14 дней) пройдено.
+Последнее обновление: 10.10.2026 — **v0.6.0 (versionCode 18) отправлена
+на ревью** (Production, раскатка 100%, все страны; Managed publishing off →
+опубликуется автоматически после одобрения). AAB взят из сборки CI
+(артефакт `WhiteListCheck-aab`, коммит `b159c5d`), подписан тем же ключом,
+что и везде. Ранее: v0.5.5 / 17 в production с 26.09.2026, **Android TV
+подключён 03.10.2026** на том же AAB. Закрытое тестирование (alpha,
+12 × 14 дней) пройдено.
 
 Ссылка в магазине: https://play.google.com/store/apps/details?id=ru.netstatus.app
 
@@ -87,6 +89,14 @@ java -jar pepk.jar --keystore=whitelistcheck-release.jks --alias=whitelistcheck 
 Данные ключа (`keytool -list -v`): alias `whitelistcheck`, PKCS12,
 RSA 4096, SHA384withRSA, действителен до 21.11.2053,
 CN=Dmitry Sukhobok, O=Dmitry Sukhobok, L=Moscow, C=RU.
+
+**Важно (уточнено 10.10.2026):** ключ один, но консоль Play показывает его
+двумя отпечатками — App signing key по **SHA-256** `58:44:D6:44:…:09:33`
+(= `5844d6…`, он же в F-Droid/RuStore/GitHub), а Upload key по **SHA-1**
+`FB:7B:97:0B:D9:35:F5:91:60:F4:17:D4:98:66:05:11:92:1F:DA:CC`. Это ОДИН файл
+`whitelistcheck-release.jks` (upload = app signing). Поэтому AAB из CI
+(подписан этим ключом) Play принимает как есть — отдельный upload-ключ
+не нужен. При загрузке 0.6.0 это подтвердилось.
 
 Следствие: `whitelistcheck-release.jks` теперь завязан на ЧЕТЫРЕ канала
 (Play, RuStore, F-Droid `AllowedAPKSigningKeys`, GitHub). Потеря =
