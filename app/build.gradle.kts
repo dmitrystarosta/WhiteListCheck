@@ -31,8 +31,8 @@ android {
         applicationId = "ru.netstatus.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 18
-        versionName = "0.6.0"
+        versionCode = 19
+        versionName = "0.6.1"
     }
 
     dependenciesInfo {
@@ -42,8 +42,13 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             isDebuggable = false
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
             signingConfig = signingConfigs.getByName("release")
         }
 
