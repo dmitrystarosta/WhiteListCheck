@@ -1,1 +1,1 @@
-The app is now smaller: unused code is removed at build time. Everything works as before — checks, the History screen, the widget and notifications are unchanged.
+The app is now smaller: unused code is removed at build time. Edits in the site lists now show up on the main screen right away, and the "Config" label always matches the current lists. In History, earlier entries now expand three days at a time, so a long journal is easier to browse.
