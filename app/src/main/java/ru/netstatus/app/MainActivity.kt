@@ -1680,14 +1680,16 @@ fun HistoryScreen(onBack: () -> Unit) {
                 // Показываем записи за последние windows×3 суток (считаем по дням,
                 // в которые есть записи, чтобы «следующие 3 суток» всегда что-то
                 // добавляли). Каждый тап раскрывает следующие три таких дня.
-                // «X из Y»: Y — всего записей в журнале, X — сколько добавит
-                // следующее окно.
+                // «X из N»: X — сколько добавит следующее окно, N — сколько записей
+                // ещё скрыто (всего минус показанные); N убывает к нулю, а на
+                // последнем шаге X == N (окно открывает весь остаток).
                 val dayKeys = list.map { startOfDay(it.ts) }.distinct().sortedDescending()
                 val shown = (3 * windows).coerceAtMost(dayKeys.size)
                 val shownSet = dayKeys.take(shown).toHashSet()
                 val nextSet = dayKeys.drop(shown).take(3).toHashSet()
                 val visible = list.filter { startOfDay(it.ts) in shownSet }
                 val nextChunk = list.count { startOfDay(it.ts) in nextSet }
+                val hidden = list.size - visible.size
                 val hasEarlier = dayKeys.size > shown
                 LazyColumn(Modifier.weight(1f)) {
                     itemsIndexed(visible) { i, e ->
@@ -1704,7 +1706,7 @@ fun HistoryScreen(onBack: () -> Unit) {
                                     .fillMaxWidth()
                                     .padding(vertical = 8.dp)
                                     .tvFocusHighlight(RoundedCornerShape(12.dp))
-                            ) { Text("Показать более ранние ($nextChunk из ${list.size})") }
+                            ) { Text("Показать более ранние ($nextChunk из $hidden)") }
                         }
                     }
                 }
