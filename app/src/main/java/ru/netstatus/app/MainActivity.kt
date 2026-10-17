@@ -139,6 +139,10 @@ data class ScanState(
     val groupB: List<ProbeResult> = emptyList(), // обычный интернет вне списка
     val groupC: List<ProbeResult> = emptyList(), // заблокированные (контроль)
     val configSource: String = "встроенный список",
+    // Ревизия списков сайтов, под которую собраны текущие карточки. Сверяем её
+    // при возврате из «Списков сайтов»: если там что-то изменили, тихо
+    // перепроверяем, чтобы правка «действовала сразу».
+    val listsRev: Int = 0,
     // Время (мс), когда получен ЭТОТ результат. 0 = экран ещё ничего не показывал.
     // Нужен, чтобы при возврате в приложение отличить свежий внутренний результат
     // от более новой проверки, сделанной снаружи (виджет / фон).
@@ -189,6 +193,7 @@ object ProbeConfig {
 object ProbeStore {
     private const val PREFS = "netstatus"
     private const val KEY = "custom_lists"
+    private const val REV_KEY = "lists_rev"
 
     // Возвращает пользовательские списки, а если их нет или они повреждены — встроенные.
     fun load(ctx: Context): Triple<List<Probe>, List<Probe>, List<Probe>> {
@@ -204,16 +209,28 @@ object ProbeStore {
             list.forEach { put(JSONObject().put("name", it.name).put("url", it.url)) }
         }
         val json = JSONObject().put("a", arr(a)).put("b", arr(b)).put("c", arr(c)).toString()
-        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .edit().putString(KEY, json).apply()
+        val prefs = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putString(KEY, json)
+            .putInt(REV_KEY, prefs.getInt(REV_KEY, 0) + 1)
+            .apply()
     }
 
     fun reset(ctx: Context) {
-        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().remove(KEY).apply()
+        val prefs = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        prefs.edit()
+            .remove(KEY)
+            .putInt(REV_KEY, prefs.getInt(REV_KEY, 0) + 1)
+            .apply()
     }
 
     fun isCustom(ctx: Context): Boolean =
         ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).contains(KEY)
+
+    // Счётчик правок списков. Главный экран сверяет его при возврате из
+    // «Списков сайтов», чтобы понять, изменились ли списки с последней проверки.
+    fun rev(ctx: Context): Int =
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getInt(REV_KEY, 0)
 }
 
 // ---------- Журнал проверок (лог) ----------
@@ -965,9 +982,19 @@ fun MainScreen(
                 var c = ProbeConfig.defaultC
                 var source = "встроенный список"
 
-                if (ProbeStore.isCustom(context)) {
-                    // Пользователь редактировал списки — они в приоритете.
-                    val (ca, cb, cc) = ProbeStore.load(context)
+                // Ревизия списков на момент этой проверки — ею пометим карточки,
+                // чтобы при возврате из «Списков сайтов» понять, не устарели ли они.
+                val listsRev = ProbeStore.rev(context)
+
+                // load() сам отдаёт встроенные списки, если пользовательских нет
+                // или они повреждены. Подпись «Конфиг» определяем по фактическому
+                // содержимому, а не по наличию ключа: иначе ярлык мог врать
+                // (списки встроенные, а подпись «пользовательский»).
+                val (ca, cb, cc) = ProbeStore.load(context)
+                val isUserLists = ca != ProbeConfig.defaultA ||
+                    cb != ProbeConfig.defaultB ||
+                    cc != ProbeConfig.defaultC
+                if (isUserLists) {
                     a = ca; b = cb; c = cc
                     source = "пользовательский список"
                 } else if (ProbeConfig.REMOTE_CONFIG_URL.isNotBlank()) {
@@ -1013,6 +1040,7 @@ fun MainScreen(
                         verdict = Verdict.NO_INTERNET,
                         groupA = a.map(mark), groupB = b.map(mark), groupC = c.map(mark),
                         configSource = source,
+                        listsRev = listsRev,
                         checkedAt = now
                     )
                     return@launch
@@ -1034,7 +1062,8 @@ fun MainScreen(
                     networkType = net,
                     operator = operator,
                     groupA = seed(a), groupB = seed(b), groupC = seed(c),
-                    configSource = source
+                    configSource = source,
+                    listsRev = listsRev
                 )
 
                 // Запускаем все пробы разом. Каждая по завершении обновляет СВОЮ
@@ -1148,6 +1177,20 @@ fun MainScreen(
                     checkedAt = prefs.getLong("last_check_ts", 0L)
                 )
             }
+        }
+    }
+
+    // Возврат из «Списков сайтов»: при заходе туда MainScreen покидает
+    // композицию, а при возврате пересобирается — этот эффект срабатывает снова.
+    // Если списки изменили (ревизия не совпала с той, под которую собраны
+    // карточки), тихо перепроверяем: вердикт и карточки обновятся под новый
+    // список, а добавленный сайт сразу появится со своим результатом. Счётчик
+    // «Отзывов» и журнал не трогаем — это не ручная проверка.
+    LaunchedEffect(Unit) {
+        if (!state.running && state.verdict != null &&
+            state.listsRev != ProbeStore.rev(context)
+        ) {
+            runScan(countsForReview = false)
         }
     }
 
@@ -1471,6 +1514,17 @@ private fun logContextLine(e: LogEntry): String {
 private fun logDay(ts: Long): String =
     java.text.SimpleDateFormat("dd.MM.yyyy", java.util.Locale("ru")).format(java.util.Date(ts))
 
+// Начало суток (мс) в местном часовом поясе — ключ дня для окон «Истории».
+private fun startOfDay(ts: Long): Long {
+    val cal = java.util.Calendar.getInstance()
+    cal.timeInMillis = ts
+    cal.set(java.util.Calendar.HOUR_OF_DAY, 0)
+    cal.set(java.util.Calendar.MINUTE, 0)
+    cal.set(java.util.Calendar.SECOND, 0)
+    cal.set(java.util.Calendar.MILLISECOND, 0)
+    return cal.timeInMillis
+}
+
 // Экранирование ячейки CSV: если внутри разделитель/кавычка/перенос — в кавычки.
 private fun csvCell(s: String): String =
     if (s.any { it == ';' || it == '"' || it == '\n' || it == '\r' })
@@ -1553,7 +1607,8 @@ fun HistoryScreen(onBack: () -> Unit) {
         value = withContext(Dispatchers.IO) { CheckLog.load(context) }
     }
     var showClearConfirm by remember { mutableStateOf(false) }
-    var showAllEarlier by rememberSaveable { mutableStateOf(false) }
+    // Сколько окон по 3 дня раскрыто. 1 = последние 3 дня (с записями).
+    var windows by rememberSaveable { mutableStateOf(1) }
 
     BackHandler { onBack() }
 
@@ -1622,11 +1677,18 @@ fun HistoryScreen(onBack: () -> Unit) {
                 }
             }
             else -> {
-                // По умолчанию — последние 7 дней; остальное из 30-дневного
-                // хранилища прячем за «Показать более ранние».
-                val weekCutoff = System.currentTimeMillis() - 7L * 24 * 60 * 60 * 1000
-                val earlierCount = list.count { it.ts < weekCutoff }
-                val visible = if (showAllEarlier) list else list.filter { it.ts >= weekCutoff }
+                // Показываем записи за последние windows×3 суток (считаем по дням,
+                // в которые есть записи, чтобы «следующие 3 суток» всегда что-то
+                // добавляли). Каждый тап раскрывает следующие три таких дня.
+                // «X из Y»: Y — всего записей в журнале, X — сколько добавит
+                // следующее окно.
+                val dayKeys = list.map { startOfDay(it.ts) }.distinct().sortedDescending()
+                val shown = (3 * windows).coerceAtMost(dayKeys.size)
+                val shownSet = dayKeys.take(shown).toHashSet()
+                val nextSet = dayKeys.drop(shown).take(3).toHashSet()
+                val visible = list.filter { startOfDay(it.ts) in shownSet }
+                val nextChunk = list.count { startOfDay(it.ts) in nextSet }
+                val hasEarlier = dayKeys.size > shown
                 LazyColumn(Modifier.weight(1f)) {
                     itemsIndexed(visible) { i, e ->
                         val day = logDay(e.ts)
@@ -1634,15 +1696,15 @@ fun HistoryScreen(onBack: () -> Unit) {
                         if (day != prevDay) DayDivider(day)
                         LogRow(e)
                     }
-                    if (!showAllEarlier && earlierCount > 0) {
+                    if (hasEarlier) {
                         item {
                             TextButton(
-                                onClick = { showAllEarlier = true },
+                                onClick = { windows++ },
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(vertical = 8.dp)
                                     .tvFocusHighlight(RoundedCornerShape(12.dp))
-                            ) { Text("Показать более ранние ($earlierCount)") }
+                            ) { Text("Показать более ранние ($nextChunk из ${list.size})") }
                         }
                     }
                 }
@@ -1665,7 +1727,7 @@ fun HistoryScreen(onBack: () -> Unit) {
             confirmButton = {
                 TextButton(onClick = {
                     CheckLog.clear(context)
-                    showAllEarlier = false
+                    windows = 1
                     showClearConfirm = false
                     reloadKey++
                 }) { Text("Очистить") }
