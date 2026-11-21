@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Белый список? — проверка ограничений мобильного интернета на Android</title>
   <meta name="description" content="Бесплатное Android-приложение «Белый список?» проверяет, действует ли режим белого списка мобильного интернета, пропал ли интернет полностью или включён VPN. Без рекламы и сбора данных.">
-  <meta name="keywords" content="белый список интернет, белые списки рунета, проверка мобильного интернета, ограничения интернета, Android приложение, VPN, RuStore, Google Play">
+  <meta name="keywords" content="белый список интернет, белые списки рунета, проверка мобильного интернета, ограничения интернета, Android приложение, VPN, RuStore, Google Play, F-Droid">
   <meta name="author" content="Дмитрий Староста">
   <meta name="robots" content="index,follow,max-image-preview:large">
   <meta name="color-scheme" content="light dark">
@@ -31,7 +31,7 @@
   <meta name="twitter:card" content="summary_large_image">
 
   <link rel="preload" href="assets/icon-96.webp" as="image" type="image/webp">
-  <link rel="stylesheet" href="styles.css?v=20260928-badges4">
+  <link rel="stylesheet" href="styles.css?v=20261121-fdroid">
 
   <script type="application/ld+json">
 {
@@ -62,12 +62,14 @@
 
   "installUrl": [
     "https://play.google.com/store/apps/details?id=ru.netstatus.app",
-    "https://www.rustore.ru/catalog/app/ru.netstatus.app"
+    "https://www.rustore.ru/catalog/app/ru.netstatus.app",
+    "https://f-droid.org/packages/ru.netstatus.app/"
   ],
 
   "sameAs": [
     "https://play.google.com/store/apps/details?id=ru.netstatus.app",
     "https://www.rustore.ru/catalog/app/ru.netstatus.app",
+    "https://f-droid.org/packages/ru.netstatus.app/",
     "https://github.com/dmitrystarosta/WhiteListCheck",
     "https://t.me/belyjspisok_app",
     "https://vk.ru/belyjspisok",
@@ -172,8 +174,11 @@
           <a class="badge-link badge-link--rustore" data-goal="rustore1" href="https://www.rustore.ru/catalog/app/ru.netstatus.app" target="_blank" rel="noopener noreferrer" aria-label="Скачать приложение из RuStore">
             <img src="assets/badges/rustore.png" srcset="assets/badges/rustore-320.webp 320w, assets/badges/rustore-640.webp 640w" sizes="(max-width: 560px) 144px, 178px" alt="Скачать из RuStore" width="666" height="240">
           </a>
-          <a class="badge-link badge-link--break" data-goal="github1" href="https://github.com/dmitrystarosta/WhiteListCheck/releases/latest" target="_blank" rel="noopener noreferrer" aria-label="Скачать APK с GitHub">
+          <a class="badge-link" data-goal="github1" href="https://github.com/dmitrystarosta/WhiteListCheck/releases/latest" target="_blank" rel="noopener noreferrer" aria-label="Скачать APK с GitHub">
             <img src="assets/badges/github.png" srcset="assets/badges/github-320.webp 320w, assets/badges/github-640.webp 640w" sizes="(max-width: 560px) 175px, 215px" alt="Скачать APK с GitHub" width="564" height="168">
+          </a>
+          <a class="badge-link" data-goal="fdroid1" href="https://f-droid.org/packages/ru.netstatus.app/" target="_blank" rel="noopener noreferrer" aria-label="Скачать приложение из F-Droid">
+            <img src="assets/badges/fdroid.png" srcset="assets/badges/fdroid-320.webp 320w, assets/badges/fdroid-640.webp 640w" sizes="(max-width: 560px) 175px, 215px" alt="Скачать из F-Droid" width="564" height="168">
           </a>
         </div>
         <p class="micro">Android 8.0+ · без рекламы · без регистрации · открытый исходный код</p>
@@ -346,7 +351,7 @@
       <details><summary>Можно ли проверить белый список на Android TV или ТВ-приставке?</summary><p>Да. «Белый список?» поддерживает Android TV и совместимые Android-приставки. Интерфейс на телевизоре адаптирован для большого экрана и управления пультом.</p></details>
       <details><summary>Приложение само снимает ограничения?</summary><p>Нет. «Белый список?» ничего не разблокирует и не меняет настройки сети. Оно только проверяет доступность сайтов и помогает понять, в каком режиме работает интернет.</p></details>
       <details><summary>Нужно ли отключать VPN перед проверкой?</summary><p>Да, если вы хотите проверить именно соединение мобильного оператора. При включённом VPN трафик может идти через другой сервер, поэтому результат уже не будет отражать реальное состояние сети оператора.</p></details>
-      <details><summary>Где скачать безопасную версию?</summary><p>Приложение можно скачать из Google Play, RuStore или со страницы Releases на GitHub. Для установки APK с GitHub Android может показать стандартное предупреждение об установке приложения не из официального магазина. Во всех источниках приложение подписано одним и тем же ключом, поэтому версию из любого источника можно установить поверх уже установленной без предварительного удаления.</p></details>
+      <details><summary>Где скачать безопасную версию?</summary><p>Приложение можно скачать из Google Play, RuStore, F-Droid или со страницы Releases на GitHub. Для установки APK с GitHub Android может показать стандартное предупреждение об установке приложения не из официального магазина. В F-Droid приложение собирается из исходного кода с воспроизводимой сборкой и подписано тем же ключом разработчика, что и в остальных источниках, поэтому версию из любого источника можно установить поверх уже установленной без предварительного удаления.</p></details>
       <details><summary>Приложение есть в Google Play?</summary><p>Да. «Белый список?» опубликован в Google Play и доступен в 178 странах. Обновления приходят обычным способом — через сам магазин.</p></details>
       <details><summary>Можно ли проверить исходный код?</summary><p>Да. Исходный код приложения опубликован на GitHub и доступен для просмотра.</p></details>
     </section>
@@ -357,7 +362,8 @@
       <div class="download-row compact">
         <a class="badge-link" data-goal="gplay2" href="https://play.google.com/store/apps/details?id=ru.netstatus.app" target="_blank" rel="noopener noreferrer" aria-label="Скачать приложение из Google Play"><img src="assets/badges/google-play.png" srcset="assets/badges/google-play-320.webp 320w, assets/badges/google-play-478.webp 478w" sizes="(max-width: 560px) 141px, 215px" alt="Доступно в Google Play" width="478" height="142"></a>
         <a class="badge-link badge-link--rustore" data-goal="rustore2" href="https://www.rustore.ru/catalog/app/ru.netstatus.app" target="_blank" rel="noopener noreferrer"><img src="assets/badges/rustore.png" srcset="assets/badges/rustore-320.webp 320w, assets/badges/rustore-640.webp 640w" sizes="(max-width: 560px) 144px, 178px" alt="Скачать из RuStore" width="666" height="240"></a>
-        <a class="badge-link badge-link--break" data-goal="github2" href="https://github.com/dmitrystarosta/WhiteListCheck/releases/latest" target="_blank" rel="noopener noreferrer"><img src="assets/badges/github.png" srcset="assets/badges/github-320.webp 320w, assets/badges/github-640.webp 640w" sizes="(max-width: 560px) 175px, 215px" alt="Скачать APK с GitHub" width="564" height="168"></a>
+        <a class="badge-link" data-goal="github2" href="https://github.com/dmitrystarosta/WhiteListCheck/releases/latest" target="_blank" rel="noopener noreferrer"><img src="assets/badges/github.png" srcset="assets/badges/github-320.webp 320w, assets/badges/github-640.webp 640w" sizes="(max-width: 560px) 175px, 215px" alt="Скачать APK с GitHub" width="564" height="168"></a>
+        <a class="badge-link" data-goal="fdroid2" href="https://f-droid.org/packages/ru.netstatus.app/" target="_blank" rel="noopener noreferrer"><img src="assets/badges/fdroid.png" srcset="assets/badges/fdroid-320.webp 320w, assets/badges/fdroid-640.webp 640w" sizes="(max-width: 560px) 175px, 215px" alt="Скачать из F-Droid" width="564" height="168"></a>
       </div>
     </section>
 
@@ -405,6 +411,10 @@
         <a class="footer-external" href="https://www.rustore.ru/catalog/app/ru.netstatus.app"
            target="_blank"
            rel="noopener noreferrer">RuStore</a>
+
+        <a class="footer-external" href="https://f-droid.org/packages/ru.netstatus.app/"
+           target="_blank"
+           rel="noopener noreferrer">F-Droid</a>
 
         <a class="footer-external" href="https://vk.ru/belyjspisok"
            target="_blank"
@@ -514,7 +524,7 @@
       "name": "Где скачать безопасную версию?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Приложение можно скачать из Google Play, RuStore или со страницы Releases на GitHub. Для установки APK с GitHub Android может показать стандартное предупреждение об установке приложения не из официального магазина. Во всех источниках приложение подписано одним и тем же ключом, поэтому версию из любого источника можно установить поверх уже установленной без предварительного удаления."
+        "text": "Приложение можно скачать из Google Play, RuStore, F-Droid или со страницы Releases на GitHub. Для установки APK с GitHub Android может показать стандартное предупреждение об установке приложения не из официального магазина. В F-Droid приложение собирается из исходного кода с воспроизводимой сборкой и подписано тем же ключом разработчика, что и в остальных источниках, поэтому версию из любого источника можно установить поверх уже установленной без предварительного удаления."
       }
     },
     {

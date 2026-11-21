@@ -1276,14 +1276,12 @@ footer > div a.footer-external::after{
   .cta{margin-top:72px;margin-bottom:72px}
 }
 
-/* 2026-09-28 — бейджи магазинов в две строки: Google Play и RuStore
-   сверху, GitHub под ними. Перенос даёт сам бейдж GitHub на всю
-   ширину строки — так вертикальный зазор равен горизонтальному
-   (отдельная распорка образовала бы третью строку и двойной зазор). */
-.badge-link--break{flex-basis:100%;display:flex;justify-content:center}
-
-/* Бейджи центрируются по ширине своего блока в обоих местах. */
-.download-row{justify-content:center}
+/* 2026-09-28 / 2026-11-21 — бейджи магазинов сеткой 2×2: Google Play
+   и RuStore сверху, GitHub и F-Droid снизу. Блок центрируется и
+   ограничен по ширине так, чтобы в строке помещались ровно два
+   бейджа — перенос делает flex сам, а row-gap=column-gap даёт
+   одинаковые зазоры по обеим осям (отдельная распорка не нужна). */
+.download-row{justify-content:center;max-width:460px;margin-left:auto;margin-right:auto}
 .compact{justify-content:center}
 
 /* Правая колонка блока «Конфиденциальность» — по центру высоты. */
