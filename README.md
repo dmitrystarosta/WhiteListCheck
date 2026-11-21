@@ -2,7 +2,7 @@
 
 Android-приложение, которое одним нажатием определяет, действует ли в вашем регионе режим «белого списка» мобильного интернета.
 
-**Сайт проекта: [belyjspisok.ru](https://belyjspisok.ru/)** · **[Google Play](https://play.google.com/store/apps/details?id=ru.netstatus.app)** · **[Скачать APK (последний релиз)](https://github.com/dmitrystarosta/WhiteListCheck/releases/latest)**
+**Сайт проекта: [belyjspisok.ru](https://belyjspisok.ru/)** · **[Google Play](https://play.google.com/store/apps/details?id=ru.netstatus.app)** · **[RuStore](https://www.rustore.ru/catalog/app/ru.netstatus.app)** · **[F-Droid](https://f-droid.org/packages/ru.netstatus.app/)** · **[Скачать APK (последний релиз)](https://github.com/dmitrystarosta/WhiteListCheck/releases/latest)**
 
 ## Когда пригодится
 
@@ -61,7 +61,8 @@ Android-приложение, которое одним нажатием опр�
 <p align="center">
   <a href="https://play.google.com/store/apps/details?id=ru.netstatus.app"><img src="docs/badges/google-play.png" alt="Доступно в Google Play" title="Доступно в Google Play" height="60"></a><br><br>
   <a href="https://www.rustore.ru/catalog/app/ru.netstatus.app"><img src="docs/badges/rustore.png" alt="Скачать из RuStore" title="Скачать из RuStore" height="60"></a><br><br>
-  <a href="https://github.com/dmitrystarosta/WhiteListCheck/releases/latest"><img src="docs/badges/get-it-on-github.png" alt="Скачать APK с GitHub" title="Скачать APK с GitHub" height="60"></a>
+  <a href="https://github.com/dmitrystarosta/WhiteListCheck/releases/latest"><img src="docs/badges/get-it-on-github.png" alt="Скачать APK с GitHub" title="Скачать APK с GitHub" height="60"></a><br><br>
+  <a href="https://f-droid.org/packages/ru.netstatus.app/"><img src="docs/badges/get-it-on-fdroid.png" alt="Скачать из F-Droid" title="Скачать из F-Droid" height="60"></a>
 </p>
 
 Скачайте файл WhiteListCheck_v… .apk из [Releases](https://github.com/dmitrystarosta/WhiteListCheck/releases/latest), откройте на телефоне и разрешите установку. Требуется Android 8.0+.
